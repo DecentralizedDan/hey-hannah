@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
-  Animated,
   TouchableWithoutFeedback,
   Keyboard,
   KeyboardAvoidingView,
@@ -55,7 +54,7 @@ export default function App() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
-  const blinkAnimation = new Animated.Value(0.5);
+  const [startedWriting, setStartedWriting] = useState(false);
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -97,30 +96,6 @@ export default function App() {
     setFontSize(calculateSize());
   }, [text]);
 
-  // Blinking animation for placeholder
-  useEffect(() => {
-    const blink = () => {
-      Animated.sequence([
-        Animated.timing(blinkAnimation, {
-          toValue: 0,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-        Animated.timing(blinkAnimation, {
-          toValue: 0.75, // Back to 75%
-          duration: 750,
-          useNativeDriver: true,
-        }),
-      ]).start(() => blink());
-    };
-
-    if (text.length === 0) {
-      blink();
-    } else {
-      blinkAnimation.setValue(0.5);
-    }
-  }, [text]);
-
   const cycleBackgroundColor = () => {
     setBackgroundColorIndex((prev) => (prev + 1) % COLORS.length);
   };
@@ -139,6 +114,13 @@ export default function App() {
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
+  };
+
+  const handleTextChange = (newText) => {
+    setText(newText);
+    if (newText.length > 0 && !startedWriting) {
+      setStartedWriting(true);
+    }
   };
 
   const togglePreviewMode = async () => {
@@ -177,19 +159,15 @@ export default function App() {
       if (refToUse && typeof refToUse.measure === "function") {
         refToUse.measure((_x, _y, _width, height) => {
           // Log the measured height in the terminal for debugging
-          console.log(`Measured Height: ${height} pixels`);
           resolve(height);
         });
       } else {
-        console.log("Text measurement ref not ready, using TextInput for measurement");
         // Fallback: measure the TextInput if available
         if (textInputRef.current && typeof textInputRef.current.measure === "function") {
           textInputRef.current.measure((_x, _y, _width, height) => {
-            console.log(`Measured Height from TextInput: ${height} pixels`);
             resolve(height);
           });
         } else {
-          console.log("No measurement ref available, using fallback height");
           resolve(200); // Fallback height in pixels
         }
       }
@@ -293,8 +271,6 @@ export default function App() {
             result: "tmpfile",
             height: captureHeight,
           });
-
-          console.log("Captured image URI:", uri);
 
           if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(uri, {
@@ -433,20 +409,20 @@ export default function App() {
                       made with Hey Hannah
                     </Text>
                   </View>
-                ) : text.length === 0 ? (
-                  <Animated.Text
+                ) : !startedWriting ? (
+                  <Text
                     style={[
                       styles.placeholderText,
                       {
                         color: currentTextColor,
                         fontSize: fontSize,
                         textAlign: currentAlignment,
-                        opacity: blinkAnimation,
+                        opacity: 0.6, // 60% opacity
                       },
                     ]}
                   >
                     [start writing]
-                  </Animated.Text>
+                  </Text>
                 ) : null}
 
                 {/* Invisible text for measurement - always rendered */}
@@ -477,7 +453,7 @@ export default function App() {
                       },
                     ]}
                     value={text}
-                    onChangeText={setText}
+                    onChangeText={handleTextChange}
                     placeholder=""
                     multiline
                     scrollEnabled={true}
@@ -492,43 +468,51 @@ export default function App() {
       </KeyboardAvoidingView>
 
       {/* Preview overlay - rendered outside main layout */}
-      {isPreviewMode && text.length > 0 && (
+      {isPreviewMode && (
         <TouchableWithoutFeedback onPress={exitPreviewMode}>
           <View style={styles.previewOverlay}>
             <View style={styles.previewOverlayBackground} />
-            <View
-              style={[
-                styles.previewContainerOverlay,
-                {
-                  backgroundColor: currentBackgroundColor,
-                  height: previewHeight,
-                  top: Dimensions.get("window").height / 2 - previewHeight / 2, // Center vertically on screen
-                },
-              ]}
-            >
-              <Text
+            {text.length > 0 ? (
+              <View
                 style={[
-                  styles.previewText,
+                  styles.previewContainerOverlay,
                   {
-                    color: currentTextColor,
-                    fontSize: fontSize,
-                    textAlign: currentAlignment,
+                    backgroundColor: currentBackgroundColor,
+                    height: previewHeight,
+                    top: Dimensions.get("window").height / 2 - previewHeight / 2, // Center vertically on screen
                   },
                 ]}
               >
-                {text}
-              </Text>
-              <Text
-                style={[
-                  styles.watermark,
-                  {
-                    color: currentTextColor,
-                  },
-                ]}
-              >
-                made with Hey Hannah
-              </Text>
-            </View>
+                <Text
+                  style={[
+                    styles.previewText,
+                    {
+                      color: currentTextColor,
+                      fontSize: fontSize,
+                      textAlign: currentAlignment,
+                    },
+                  ]}
+                >
+                  {text}
+                </Text>
+                <Text
+                  style={[
+                    styles.watermark,
+                    {
+                      color: currentTextColor,
+                    },
+                  ]}
+                >
+                  made with Hey Hannah
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.emptyPreviewContainer}>
+                <Text style={styles.emptyPreviewText}>
+                  nothing written yet -- touch anywhere to exit preview mode
+                </Text>
+              </View>
+            )}
           </View>
         </TouchableWithoutFeedback>
       )}
@@ -638,6 +622,23 @@ const styles = StyleSheet.create({
     paddingTop: "5%",
     width: "100%",
     pointerEvents: "none", // Don't interfere with touch events
+  },
+  emptyPreviewContainer: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: [{ translateX: -150 }, { translateY: -25 }], // Center the 300px wide container
+    width: 300, // Fixed width in pixels
+    height: 50, // Fixed height in pixels
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyPreviewText: {
+    color: "#FFFFFF", // White text on black background
+    fontSize: 16, // Font size in pixels
+    textAlign: "center",
+    fontStyle: "italic",
+    opacity: 0.8,
   },
   topControlsContainer: {
     flexDirection: "row",
