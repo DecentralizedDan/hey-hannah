@@ -13,7 +13,9 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.heyhannah.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "be037269-7918-4aef-bae4-254c10d58721"
+      }
     }
   }
 }
