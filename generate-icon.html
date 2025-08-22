@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hey Hannah App Icon Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #FFFF00;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .icon-preview {
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .download-btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .download-btn:hover {
+            background: #0056CC;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hey Hannah App Icon</h1>
+        
+        <!-- App Icon -->
+        <div id="app-icon" class="icon-preview" style="
+            width: 1024px;
+            height: 1024px;
+            background-color: #FFFF00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+        ">
+            <div style="
+                color: #0000FF;
+                font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 275px;
+                font-weight: bold;
+                text-align: left;
+                line-height: 1.2;
+                white-space: nowrap;
+            ">
+                Hey<br/>Hannah
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="downloadIcon()">Download as PNG</button>
+
+        <div class="instructions">
+            <h3>Instructions:</h3>
+
+            <p>Click the "Download as PNG" button above to automatically download the icon.</p>
+            
+            <h3>Icon Specs:</h3>
+            <ul>
+                <li>Size: 1024x1024 pixels (App Store requirement)</li>
+                <li>Background: Bright yellow (#FFFF00)</li>
+                <li>Text: Blue (#0000FF) "Hey Hannah"</li>
+                <li>Font: System font, bold, 275px</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function downloadIcon() {
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 1024;
+            canvas.height = 1024;
+
+            // Fill background
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // Set text properties
+            ctx.fillStyle = '#0000FF';
+            ctx.font = 'bold 275px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            // Calculate text block positioning to center the overall text block
+            // "Hannah" is longer, so we use it to calculate center positioning
+            const hannahWidth = ctx.measureText('Hannah').width;
+            const heyWidth = ctx.measureText('Hey').width;
+            
+            // Center the text block (using the longer "Hannah" as reference)
+            const textBlockX = (1024 - hannahWidth) / 2;
+            
+            // Line height calculation (275px * 1.2 line-height)
+            const lineHeight = 275 * 1.2;
+            
+            // Center the text block vertically
+            const textBlockStartY = (1024 - lineHeight) / 2.925;
+
+            // Draw "Hey" on first line (left-aligned within the centered block)
+            ctx.fillText('Hey', textBlockX, textBlockStartY);
+            
+            // Draw "Hannah" on second line (left-aligned within the centered block)
+            ctx.fillText('Hannah', textBlockX, textBlockStartY + lineHeight);
+
+            // Download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hey-hannah-icon-1024.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+</html>
