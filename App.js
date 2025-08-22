@@ -186,6 +186,7 @@ export default function App() {
       { text: "Cancel", style: "cancel" },
       { text: "Save to Photos", onPress: saveToPhotos },
       { text: "Send Message", onPress: shareAsMessage },
+      { text: "Share to Socials (Instagram, etc.)", onPress: shareToSocials },
     ]);
   };
 
@@ -292,6 +293,63 @@ export default function App() {
     } catch (error) {
       console.error("Share error:", error);
       Alert.alert("Error", "Failed to share image.");
+    }
+  };
+
+  const shareToSocials = async () => {
+    try {
+      if (!text.trim()) {
+        Alert.alert("No Text", "Please enter some text before sharing.");
+        return;
+      }
+
+      // Dismiss keyboard for clean capture
+      Keyboard.dismiss();
+
+      // Wait a moment for keyboard to hide and UI to update
+      setTimeout(async () => {
+        try {
+          setIsCapturing(true);
+
+          // Wait a bit for the capture text to render
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          if (!captureTextRef.current) {
+            Alert.alert("Error", "Text area not ready for capture.");
+            return;
+          }
+
+          const measuredHeight = await measureTextHeight();
+          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+          const watermarkHeight = 40; // Space for watermark and margin in pixels
+          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
+          const uri = await captureRef(captureTextRef.current, {
+            format: "jpg",
+            quality: 1.0,
+            result: "tmpfile",
+            height: captureHeight,
+          });
+
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(uri, {
+              mimeType: "image/jpeg",
+              dialogTitle: "Share to Socials (Instagram, etc.)",
+              UTI: "com.instagram.photo", // Hint for Instagram
+            });
+          } else {
+            Alert.alert("Error", "Sharing is not available on this device.");
+          }
+        } catch (error) {
+          console.error("Socials share error:", error);
+          Alert.alert("Error", `Failed to share to Instagram: ${error.message}`);
+        } finally {
+          setIsCapturing(false);
+        }
+      }, 1000); // Delay in milliseconds
+    } catch (error) {
+      console.error("Socials share error:", error);
+      Alert.alert("Error", "Failed to share to Instagram.");
     }
   };
 
