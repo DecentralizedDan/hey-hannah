@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+# Technical Writing Style
+
+Use technical, concise writing for all human-readable text including:
+
+- Documentation
+- Comments
+- README files
+- Error messages
+- User interface text
+
+## Requirements
+
+- Minimize adjectives and adverbs
+- Prioritize clarity over eloquence
+- Use direct, specific language
+- Avoid flowery or marketing language
+- Keep sentences short and declarative
+- Use technical terms accurately
+- Eliminate unnecessary words
+
+## Examples
+
+**Avoid:**
+
+- "beautifully designed interface"
+- "seamlessly integrates"
+- "powerful and intuitive features"
+- "carefully crafted experience"
+
+**Prefer:**
+
+- "interface"
+- "integrates"
+- "features"
+- "user experience"
