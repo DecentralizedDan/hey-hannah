@@ -53,11 +53,13 @@ export default function App() {
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [textHeight, setTextHeight] = useState(0);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
   const blinkAnimation = new Animated.Value(0.5);
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
+  const measureTextRef = useRef(null);
 
   // Initialize with random background color and complementary text color
   useEffect(() => {
@@ -75,26 +77,24 @@ export default function App() {
     // Simple algorithm: reduce font size as text gets longer
     const minSize = 20; // font size in pixels
     const textLength = text.length;
-    const maxLength = 500;
+    const shrinkStart = 300; // max length of text before font size starts shrinking
 
     if (text.length === 0) {
       setFontSize(baseSize);
       return;
     }
 
-    // Do not shrink font size until textLength exceeds 2 * (maxLength / 2)
-    const shrinkThreshold = maxLength * 0.75;
-    let calculatedSize;
-    if (textLength <= shrinkThreshold) {
-      calculatedSize = baseSize;
-    } else {
-      calculatedSize =
-        baseSize -
-        ((textLength - shrinkThreshold) / (maxLength - shrinkThreshold)) * (baseSize - minSize);
-      calculatedSize = Math.max(minSize, Math.min(baseSize, calculatedSize));
-    }
+    const calculateSize = () => {
+      let result = baseSize;
 
-    setFontSize(Math.round(calculatedSize));
+      if (textLength > shrinkStart) {
+        result = baseSize - ((textLength - shrinkStart) / shrinkStart) * (baseSize - minSize);
+      }
+
+      return Math.round(result);
+    };
+
+    setFontSize(calculateSize());
   }, [text]);
 
   // Blinking animation for placeholder
@@ -102,13 +102,13 @@ export default function App() {
     const blink = () => {
       Animated.sequence([
         Animated.timing(blinkAnimation, {
-          toValue: 0.1,
+          toValue: 0,
           duration: 750,
           useNativeDriver: true,
         }),
         Animated.timing(blinkAnimation, {
           toValue: 0.75, // Back to 75%
-          duration: 1000,
+          duration: 750,
           useNativeDriver: true,
         }),
       ]).start(() => blink());
@@ -141,14 +141,57 @@ export default function App() {
     Keyboard.dismiss();
   };
 
+  const togglePreviewMode = async () => {
+    if (!isPreviewMode) {
+      Keyboard.dismiss();
+      // Calculate preview height to match export before showing preview
+      if (text.length > 0) {
+        try {
+          // Wait a moment for keyboard to dismiss and text to render
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          const measuredHeight = await measureTextHeight();
+          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+          const watermarkHeight = 40; // Space for watermark and margin in pixels
+          const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+          setPreviewHeight(calculatedHeight);
+        } catch (error) {
+          console.log("Height calculation error:", error);
+          setPreviewHeight(400); // Fallback height in pixels
+        }
+      }
+    }
+    setIsPreviewMode(!isPreviewMode);
+  };
+
+  const exitPreviewMode = () => {
+    if (isPreviewMode) {
+      setIsPreviewMode(false);
+    }
+  };
+
   const measureTextHeight = () => {
     return new Promise((resolve) => {
-      if (captureTextRef.current) {
-        captureTextRef.current.measure((x, y, width, height) => {
+      // Try to use the measure text ref first (for preview), fallback to capture ref
+      const refToUse = measureTextRef.current || captureTextRef.current;
+
+      if (refToUse && typeof refToUse.measure === "function") {
+        refToUse.measure((_x, _y, _width, height) => {
+          // Log the measured height in the terminal for debugging
+          console.log(`Measured Height: ${height} pixels`);
           resolve(height);
         });
       } else {
-        resolve(0);
+        console.log("Text measurement ref not ready, using TextInput for measurement");
+        // Fallback: measure the TextInput if available
+        if (textInputRef.current && typeof textInputRef.current.measure === "function") {
+          textInputRef.current.measure((_x, _y, _width, height) => {
+            console.log(`Measured Height from TextInput: ${height} pixels`);
+            resolve(height);
+          });
+        } else {
+          console.log("No measurement ref available, using fallback height");
+          resolve(200); // Fallback height in pixels
+        }
       }
     });
   };
@@ -191,7 +234,8 @@ export default function App() {
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // 5% padding on each side
-          const captureHeight = Math.max(measuredHeight + padding, 200); // Minimum height of 200
+          const watermarkHeight = 40; // Space for watermark and margin
+          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -240,7 +284,8 @@ export default function App() {
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // 5% padding on each side
-          const captureHeight = Math.max(measuredHeight + padding, 200); // Minimum height of 200
+          const watermarkHeight = 40; // Space for watermark and margin
+          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 pixels
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -273,80 +318,142 @@ export default function App() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
-    >
-      <TouchableWithoutFeedback onPress={dismissKeyboard}>
-        <View style={styles.flex}>
-          <StatusBar barStyle="dark-content" />
+    <>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <View style={styles.flex}>
+            <StatusBar barStyle="dark-content" />
 
-          {/* Controls at top */}
-          <View style={styles.topControlsContainer}>
-            {/* Background color control */}
-            <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
+            {/* Controls at top */}
+            {!isPreviewMode && (
+              <View style={styles.topControlsContainer}>
+                {/* Background color control */}
+                <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
+                  <View
+                    style={[
+                      styles.colorCircle,
+                      {
+                        backgroundColor: currentBackgroundColor,
+                        borderColor: "#FFFFFF",
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>BG</Text>
+                </TouchableOpacity>
+
+                {/* Alignment control */}
+                <TouchableOpacity style={styles.controlButton} onPress={cycleAlignment}>
+                  <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>
+                      {currentAlignment === "left"
+                        ? "←"
+                        : currentAlignment === "center"
+                        ? "↔"
+                        : "→"}
+                    </Text>
+                  </View>
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>ALIGN</Text>
+                </TouchableOpacity>
+
+                {/* Preview control */}
+                <TouchableOpacity style={styles.controlButton} onPress={togglePreviewMode}>
+                  <View style={[styles.previewIcon, { borderColor: "#FFFFFF" }]}>
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>👁</Text>
+                  </View>
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>PREVIEW</Text>
+                </TouchableOpacity>
+
+                {/* Share control */}
+                <TouchableOpacity style={styles.controlButton} onPress={handleShare}>
+                  <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
+                  </View>
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
+                </TouchableOpacity>
+
+                {/* Text color control */}
+                <TouchableOpacity style={styles.controlButton} onPress={cycleTextColor}>
+                  <View
+                    style={[
+                      styles.colorCircle,
+                      {
+                        backgroundColor: currentTextColor,
+                        borderColor: "#FFFFFF",
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Main text area */}
+            <TouchableWithoutFeedback onPress={isPreviewMode ? exitPreviewMode : undefined}>
               <View
+                ref={textAreaRef}
                 style={[
-                  styles.colorCircle,
+                  styles.textContainer,
                   {
-                    backgroundColor: currentBackgroundColor,
-                    borderColor: "#FFFFFF",
+                    backgroundColor: isPreviewMode ? "#000000" : currentBackgroundColor,
                   },
                 ]}
-              />
-              <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>BG</Text>
-            </TouchableOpacity>
-
-            {/* Alignment control */}
-            <TouchableOpacity style={styles.controlButton} onPress={cycleAlignment}>
-              <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
-                <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>
-                  {currentAlignment === "left" ? "⫷" : currentAlignment === "center" ? "⫸" : "⫸"}
-                </Text>
-              </View>
-              <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>ALIGN</Text>
-            </TouchableOpacity>
-
-            {/* Share control */}
-            <TouchableOpacity style={styles.controlButton} onPress={handleShare}>
-              <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
-                <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
-              </View>
-              <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
-            </TouchableOpacity>
-
-            {/* Text color control */}
-            <TouchableOpacity style={styles.controlButton} onPress={cycleTextColor}>
-              <View
-                style={[
-                  styles.colorCircle,
-                  {
-                    backgroundColor: currentTextColor,
-                    borderColor: "#FFFFFF",
-                  },
-                ]}
-              />
-              <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Main text area */}
-          <View
-            ref={textAreaRef}
-            style={[styles.textContainer, { backgroundColor: currentBackgroundColor }]}
-            collapsable={false}
-          >
-            {/* Hidden text for capture - only visible during capture */}
-            {isCapturing && text.length > 0 ? (
-              <View
-                ref={captureTextRef}
-                style={[styles.captureContainer, { backgroundColor: currentBackgroundColor }]}
                 collapsable={false}
               >
+                {/* Hidden text for capture - only visible during capture */}
+                {isCapturing && text.length > 0 ? (
+                  <View
+                    ref={captureTextRef}
+                    style={[styles.captureContainer, { backgroundColor: currentBackgroundColor }]}
+                    collapsable={false}
+                  >
+                    <Text
+                      style={[
+                        styles.captureText,
+                        {
+                          color: currentTextColor,
+                          fontSize: fontSize,
+                          textAlign: currentAlignment,
+                        },
+                      ]}
+                    >
+                      {text}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.watermark,
+                        {
+                          color: currentTextColor,
+                        },
+                      ]}
+                    >
+                      made with Hey Hannah
+                    </Text>
+                  </View>
+                ) : text.length === 0 ? (
+                  <Animated.Text
+                    style={[
+                      styles.placeholderText,
+                      {
+                        color: currentTextColor,
+                        fontSize: fontSize,
+                        textAlign: currentAlignment,
+                        opacity: blinkAnimation,
+                      },
+                    ]}
+                  >
+                    [start writing]
+                  </Animated.Text>
+                ) : null}
+
+                {/* Invisible text for measurement - always rendered */}
                 <Text
+                  ref={measureTextRef}
                   style={[
-                    styles.captureText,
+                    styles.measureText,
                     {
                       color: currentTextColor,
                       fontSize: fontSize,
@@ -356,46 +463,76 @@ export default function App() {
                 >
                   {text}
                 </Text>
+
+                {/* TextInput for user interaction - hidden during capture and preview */}
+                {!isPreviewMode && (
+                  <TextInput
+                    ref={textInputRef}
+                    style={[
+                      styles.textInput,
+                      {
+                        color: isCapturing ? "transparent" : currentTextColor,
+                        fontSize: fontSize,
+                        textAlign: currentAlignment,
+                      },
+                    ]}
+                    value={text}
+                    onChangeText={setText}
+                    placeholder=""
+                    multiline
+                    scrollEnabled={true}
+                    showsVerticalScrollIndicator={false}
+                    textAlignVertical="top"
+                  />
+                )}
               </View>
-            ) : text.length === 0 ? (
-              <Animated.Text
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      {/* Preview overlay - rendered outside main layout */}
+      {isPreviewMode && text.length > 0 && (
+        <TouchableWithoutFeedback onPress={exitPreviewMode}>
+          <View style={styles.previewOverlay}>
+            <View style={styles.previewOverlayBackground} />
+            <View
+              style={[
+                styles.previewContainerOverlay,
+                {
+                  backgroundColor: currentBackgroundColor,
+                  height: previewHeight,
+                  top: Dimensions.get("window").height / 2 - previewHeight / 2, // Center vertically on screen
+                },
+              ]}
+            >
+              <Text
                 style={[
-                  styles.placeholderText,
+                  styles.previewText,
                   {
                     color: currentTextColor,
                     fontSize: fontSize,
                     textAlign: currentAlignment,
-                    opacity: blinkAnimation,
                   },
                 ]}
               >
-                [start writing]
-              </Animated.Text>
-            ) : null}
-
-            {/* TextInput for user interaction - hidden during capture */}
-            <TextInput
-              ref={textInputRef}
-              style={[
-                styles.textInput,
-                {
-                  color: isCapturing ? "transparent" : currentTextColor,
-                  fontSize: fontSize,
-                  textAlign: currentAlignment,
-                },
-              ]}
-              value={text}
-              onChangeText={setText}
-              placeholder=""
-              multiline
-              scrollEnabled={true}
-              showsVerticalScrollIndicator={false}
-              textAlignVertical="top"
-            />
+                {text}
+              </Text>
+              <Text
+                style={[
+                  styles.watermark,
+                  {
+                    color: currentTextColor,
+                  },
+                ]}
+              >
+                made with Hey Hannah
+              </Text>
+            </View>
           </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      )}
+    </>
   );
 }
 
@@ -410,6 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
     paddingTop: "5%",
+    overflow: "visible",
   },
   textInput: {
     flex: 1,
@@ -439,6 +577,67 @@ const styles = StyleSheet.create({
   },
   captureText: {
     textAlignVertical: "top",
+    flex: 1,
+  },
+  watermark: {
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 20,
+    opacity: 0.7,
+    fontStyle: "italic",
+  },
+  previewContainer: {
+    position: "absolute",
+    width: "100%",
+
+    // width: "90%", // Match the captured image width
+    // left: "5%", // Center horizontally
+    // paddingHorizontal: "5%",
+    paddingTop: "5%",
+    paddingBottom: "5%",
+    borderRadius: 0,
+    overflow: "visible",
+  },
+  previewOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: Dimensions.get("window").width, // Full screen width in pixels
+    height: Dimensions.get("window").height, // Full screen height in pixels
+    zIndex: 1000, // Ensure it's on top
+  },
+  previewOverlayBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#000000", // Black background
+  },
+  previewContainerOverlay: {
+    position: "absolute",
+    // width: Dimensions.get("window").width * 0.9, // 90% of screen width in pixels
+    // left: Dimensions.get("window").width * 0.05, // 5% margin on left in pixels
+    paddingTop: "5%",
+    paddingBottom: "5%",
+    borderRadius: 0,
+    // No paddingHorizontal - already handled by container positioning
+  },
+  previewText: {
+    textAlignVertical: "top",
+    flex: 1,
+    paddingHorizontal: "5%", // Text padding in pixels
+  },
+  measureText: {
+    position: "absolute",
+    opacity: 0, // Invisible but measurable
+    textAlignVertical: "top",
+    paddingHorizontal: "5%",
+    paddingTop: "5%",
+    width: "100%",
+    pointerEvents: "none", // Don't interfere with touch events
   },
   topControlsContainer: {
     flexDirection: "row",
@@ -469,6 +668,15 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   shareIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  previewIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
