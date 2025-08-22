@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+# Pixel Value Comments
+
+When setting a variable value in pixels, add a comment on the same line describing what the measurement represents.
+
+## Format
+
+```javascript
+const variableName = 40; // description in pixels
+```
+
+## Examples
+
+**Good:**
+
+```javascript
+const watermarkHeight = 40; // Space for watermark and margin in pixels
+const padding = 20; // Text padding in pixels
+const buttonSize = 50; // Button width and height in pixels
+const marginTop = 65; // Top margin in pixels
+```
+
+**Avoid:**
+
+```javascript
+const watermarkHeight = 40;
+const padding = 20;
+const buttonSize = 50;
+```
+
+## Rules
+
+- Comment should describe what the pixel measurement represents
+- Use "in pixels" at the end of the comment for clarity
+- Keep comments concise but descriptive
+- Apply to any numeric value that represents pixel dimensions, spacing, or positioning

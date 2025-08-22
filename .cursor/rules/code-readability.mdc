@@ -1,0 +1,72 @@
+---
+alwaysApply: true
+---
+
+# Code Readability Rules
+
+Follow these formatting rules to maintain consistent, readable code.
+
+## Alphabetize Const Declarations
+
+When declaring multiple const variables in a block, alphabetize them when possible to improve readability and reduce merge conflicts.
+
+### Examples
+
+**Good:**
+
+```javascript
+const alignment = getAlignment();
+const backgroundColor = getBackgroundColor();
+const fontSize = getFontSize();
+const textColor = getTextColor();
+```
+
+**Avoid:**
+
+```javascript
+const fontSize = getFontSize();
+const backgroundColor = getBackgroundColor();
+const textColor = getTextColor();
+const alignment = getAlignment();
+```
+
+### When to Apply
+
+- Multiple const declarations in the same scope
+- Related variables being declared together
+- Does not apply when declaration order affects logic or dependencies
+
+## Add Newline Before Return Statements
+
+Always add a blank line before return statements to visually separate the return from the preceding logic.
+
+### Examples
+
+**Good:**
+
+```javascript
+function calculateHeight() {
+  const measuredHeight = measureText();
+  const padding = calculatePadding();
+  const total = measuredHeight + padding;
+
+  return total;
+}
+```
+
+**Avoid:**
+
+```javascript
+function calculateHeight() {
+  const measuredHeight = measureText();
+  const padding = calculatePadding();
+  const total = measuredHeight + padding;
+  return total;
+}
+```
+
+### When to Apply
+
+- All return statements in functions
+- Both early returns and final returns
+- Exception: Single-line functions or immediately after opening brace
