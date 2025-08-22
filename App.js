@@ -108,9 +108,9 @@ export default function App() {
     setAlignment((prev) => (prev + 1) % ALIGNMENTS.length);
   };
 
+  const currentAlignment = ALIGNMENTS[alignment];
   const currentBackgroundColor = COLOR_VALUES[COLORS[backgroundColorIndex]];
   const currentTextColor = COLOR_VALUES[COLORS[textColorIndex]];
-  const currentAlignment = ALIGNMENTS[alignment];
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -135,6 +135,7 @@ export default function App() {
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
           setPreviewHeight(calculatedHeight);
         } catch (error) {
           console.log("Height calculation error:", error);
@@ -142,6 +143,7 @@ export default function App() {
         }
       }
     }
+
     setIsPreviewMode(!isPreviewMode);
   };
 
@@ -211,9 +213,9 @@ export default function App() {
           await new Promise((resolve) => setTimeout(resolve, 100));
 
           const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // 5% padding on each side
-          const watermarkHeight = 40; // Space for watermark and margin
-          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200
+          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+          const watermarkHeight = 40; // Space for watermark and margin in pixels
+          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -261,9 +263,9 @@ export default function App() {
           await new Promise((resolve) => setTimeout(resolve, 100));
 
           const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // 5% padding on each side
-          const watermarkHeight = 40; // Space for watermark and margin
-          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 pixels
+          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+          const watermarkHeight = 40; // Space for watermark and margin in pixels
+          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -564,9 +566,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   watermark: {
-    fontSize: 12,
+    fontSize: 12, // Watermark text size in pixels
     textAlign: "center",
-    marginTop: 20,
+    marginTop: 20, // Top margin in pixels
     opacity: 0.7,
     fontStyle: "italic",
   },
@@ -644,54 +646,54 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    paddingTop: 50, // Account for status bar
+    paddingVertical: 15, // Vertical padding in pixels
+    paddingHorizontal: 20, // Horizontal padding in pixels
+    paddingTop: 50, // Account for status bar in pixels
     backgroundColor: "#000000", // Black background for controls
   },
   controlButton: {
     alignItems: "center",
   },
   colorCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    marginBottom: 5,
+    width: 40, // Button width in pixels
+    height: 40, // Button height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
+    marginBottom: 5, // Bottom margin in pixels
   },
   alignmentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: 40, // Icon width in pixels
+    height: 40, // Icon height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 5, // Bottom margin in pixels
   },
   shareIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: 40, // Icon width in pixels
+    height: 40, // Icon height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 5, // Bottom margin in pixels
   },
   previewIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    width: 40, // Icon width in pixels
+    height: 40, // Icon height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 5, // Bottom margin in pixels
   },
   alignmentText: {
-    fontSize: 18,
+    fontSize: 18, // Text size in pixels
     fontWeight: "bold",
   },
   controlLabel: {
-    fontSize: 10,
+    fontSize: 10, // Label text size in pixels
     fontWeight: "bold",
   },
 });
