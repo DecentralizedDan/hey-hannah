@@ -43,6 +43,12 @@ const COMPLEMENTARY_COLORS = {
 
 const ALIGNMENTS = ["left", "center", "right"];
 
+const FONT_FAMILIES = [
+  "System", // Default system font
+  "Courier", // Built-in monospace font available on both iOS and Android
+  "Times New Roman", // Classic serif font available on both iOS and Android
+];
+
 export default function App() {
   const baseSize = 32; // font size in pixels
 
@@ -55,6 +61,7 @@ export default function App() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
   const [startedWriting, setStartedWriting] = useState(false);
+  const [fontFamily, setFontFamily] = useState(0); // 0=default, 1=monospace
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -108,8 +115,14 @@ export default function App() {
     setAlignment((prev) => (prev + 1) % ALIGNMENTS.length);
   };
 
+  const cycleFontFamily = () => {
+    setFontFamily((prev) => (prev + 1) % FONT_FAMILIES.length);
+  };
+
   const currentAlignment = ALIGNMENTS[alignment];
   const currentBackgroundColor = COLOR_VALUES[COLORS[backgroundColorIndex]];
+  const currentFontFamily =
+    FONT_FAMILIES[fontFamily] === "System" ? undefined : FONT_FAMILIES[fontFamily];
   const currentTextColor = COLOR_VALUES[COLORS[textColorIndex]];
 
   const dismissKeyboard = () => {
@@ -381,6 +394,28 @@ export default function App() {
                   <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>BG</Text>
                 </TouchableOpacity>
 
+                {/* Text color control */}
+                <TouchableOpacity style={styles.controlButton} onPress={cycleTextColor}>
+                  <View
+                    style={[
+                      styles.colorCircle,
+                      {
+                        backgroundColor: currentTextColor,
+                        borderColor: "#FFFFFF",
+                      },
+                    ]}
+                  />
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
+                </TouchableOpacity>
+
+                {/* Font family control */}
+                <TouchableOpacity style={styles.controlButton} onPress={cycleFontFamily}>
+                  <View style={[styles.fontIcon, { borderColor: "#FFFFFF" }]}>
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>Aa</Text>
+                  </View>
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>FONT</Text>
+                </TouchableOpacity>
+
                 {/* Alignment control */}
                 <TouchableOpacity style={styles.controlButton} onPress={cycleAlignment}>
                   <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
@@ -398,7 +433,7 @@ export default function App() {
                 {/* Preview control */}
                 <TouchableOpacity style={styles.controlButton} onPress={togglePreviewMode}>
                   <View style={[styles.previewIcon, { borderColor: "#FFFFFF" }]}>
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>👁</Text>
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>📄</Text>
                   </View>
                   <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>PREVIEW</Text>
                 </TouchableOpacity>
@@ -409,20 +444,6 @@ export default function App() {
                     <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
                   </View>
                   <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
-                </TouchableOpacity>
-
-                {/* Text color control */}
-                <TouchableOpacity style={styles.controlButton} onPress={cycleTextColor}>
-                  <View
-                    style={[
-                      styles.colorCircle,
-                      {
-                        backgroundColor: currentTextColor,
-                        borderColor: "#FFFFFF",
-                      },
-                    ]}
-                  />
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -453,6 +474,7 @@ export default function App() {
                           color: currentTextColor,
                           fontSize: fontSize,
                           textAlign: currentAlignment,
+                          fontFamily: currentFontFamily,
                         },
                       ]}
                     >
@@ -477,6 +499,7 @@ export default function App() {
                         color: currentTextColor,
                         fontSize: fontSize,
                         textAlign: currentAlignment,
+                        fontFamily: currentFontFamily,
                         opacity: 0.6, // 60% opacity
                       },
                     ]}
@@ -494,6 +517,7 @@ export default function App() {
                       color: currentTextColor,
                       fontSize: fontSize,
                       textAlign: currentAlignment,
+                      fontFamily: currentFontFamily,
                     },
                   ]}
                 >
@@ -510,6 +534,7 @@ export default function App() {
                         color: isCapturing ? "transparent" : currentTextColor,
                         fontSize: fontSize,
                         textAlign: currentAlignment,
+                        fontFamily: currentFontFamily,
                       },
                     ]}
                     value={text}
@@ -550,6 +575,7 @@ export default function App() {
                       color: currentTextColor,
                       fontSize: fontSize,
                       textAlign: currentAlignment,
+                      fontFamily: currentFontFamily,
                     },
                   ]}
                 >
@@ -738,6 +764,15 @@ const styles = StyleSheet.create({
     marginBottom: 5, // Bottom margin in pixels
   },
   previewIcon: {
+    width: 40, // Icon width in pixels
+    height: 40, // Icon height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5, // Bottom margin in pixels
+  },
+  fontIcon: {
     width: 40, // Icon width in pixels
     height: 40, // Icon height in pixels
     borderRadius: 20, // Corner radius in pixels
