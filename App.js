@@ -14,6 +14,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
@@ -50,7 +51,8 @@ const FONT_FAMILIES = [
   "Times New Roman", // Classic serif font available on both iOS and Android
 ];
 
-export default function App() {
+function AppContent() {
+  const insets = useSafeAreaInsets();
   const baseSize = 32; // font size in pixels
 
   const [text, setText] = useState("");
@@ -445,11 +447,11 @@ export default function App() {
       >
         <TouchableWithoutFeedback onPress={dismissKeyboard}>
           <View style={styles.flex}>
-            <StatusBar barStyle="dark-content" />
+            <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
             {/* Controls at top */}
             {!isPreviewMode && (
-              <View style={styles.topControlsContainer}>
+              <View style={[styles.topControlsContainer, { paddingTop: insets.top + 15 }]}>
                 {/* Background color control */}
                 <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
                   <View
@@ -824,7 +826,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 15, // Vertical padding in pixels
     paddingHorizontal: 20, // Horizontal padding in pixels
-    paddingTop: 50, // Account for status bar in pixels
     backgroundColor: "#000000", // Black background for controls
   },
   controlButton: {
@@ -882,3 +883,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
