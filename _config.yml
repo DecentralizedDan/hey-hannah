@@ -1,0 +1,79 @@
+# Site settings
+title: Hey Hannah
+email:
+description: >-
+  An open source iPhone app for creating text images. Convert text into JPG images
+  for sharing on social media, messaging, or other platforms.
+baseurl: ""
+url: "https://username.github.io"
+
+# Build settings
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
+
+# Exclude from processing
+exclude:
+  - node_modules/
+  - package.json
+  - package-lock.json
+  - App.js
+  - index.js
+  - app.json
+  - eas.json
+  - assets/
+  - generate-icon.html
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+
+# Collection settings
+collections:
+  features:
+    output: false
+
+# Site configuration
+timezone: America/New_York
+permalink: /:categories/:year/:month/:day/:title/
+
+# SEO settings
+author:
+twitter:
+  username:
+  card: summary
+
+# App-specific settings
+app:
+  name: "Hey Hannah"
+  version: "1.0.0"
+  platform: "iOS"
+  status: "In Development"
+  license: "GPL-3.0"
+  app_store_url: ""
+  github_repo: "https://github.com/username/hey-hannah"
+
+# Color scheme
+colors:
+  - white
+  - black
+  - red
+  - blue
+  - green
+  - yellow
+  - purple
+  - orange
+
+# Features
+features:
+  - name: "Text Creation & Editing"
+    description: "Type and edit text with ease"
+  - name: "Image Export"
+    description: "Save text as JPG images"
+  - name: "Sharing"
+    description: "Copy images to clipboard or share to other apps"
+  - name: "Color Options"
+    description: "Choose from 8 colors for background and text"
+
+# Social links
+github_username: username
