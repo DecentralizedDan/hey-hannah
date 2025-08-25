@@ -15,7 +15,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.heyhannah.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "This app needs access to save your text images to Photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs access to save your text images to Photos."
+      }
     },
     "android": {
       "adaptiveIcon": {

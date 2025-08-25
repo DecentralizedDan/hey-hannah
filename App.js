@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
 } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
@@ -137,27 +138,33 @@ export default function App() {
   };
 
   const togglePreviewMode = async () => {
-    if (!isPreviewMode) {
-      Keyboard.dismiss();
-      // Calculate preview height to match export before showing preview
-      if (text.length > 0) {
-        try {
-          // Wait a moment for keyboard to dismiss and text to render
-          await new Promise((resolve) => setTimeout(resolve, 150));
-          const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-          const watermarkHeight = 40; // Space for watermark and margin in pixels
-          const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+    try {
+      if (!isPreviewMode) {
+        Keyboard.dismiss();
+        // Calculate preview height to match export before showing preview
+        if (text.length > 0) {
+          try {
+            // Wait a moment for keyboard to dismiss and text to render
+            await new Promise((resolve) => setTimeout(resolve, 200)); // Increased delay in milliseconds
+            const measuredHeight = await measureTextHeight();
+            const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+            const watermarkHeight = 40; // Space for watermark and margin in pixels
+            const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
-          setPreviewHeight(calculatedHeight);
-        } catch (error) {
-          console.log("Height calculation error:", error);
-          setPreviewHeight(400); // Fallback height in pixels
+            setPreviewHeight(calculatedHeight);
+          } catch (error) {
+            console.warn("Height calculation error:", error);
+            setPreviewHeight(400); // Fallback height in pixels
+          }
         }
       }
-    }
 
-    setIsPreviewMode(!isPreviewMode);
+      setIsPreviewMode(!isPreviewMode);
+    } catch (error) {
+      console.error("Preview mode toggle error:", error);
+      // Still toggle preview mode even if calculation fails
+      setIsPreviewMode(!isPreviewMode);
+    }
   };
 
   const exitPreviewMode = () => {
@@ -168,23 +175,51 @@ export default function App() {
 
   const measureTextHeight = () => {
     return new Promise((resolve) => {
-      // Try to use the measure text ref first (for preview), fallback to capture ref
-      const refToUse = measureTextRef.current || captureTextRef.current;
+      try {
+        // Try to use the measure text ref first (for preview), fallback to capture ref
+        const refToUse = measureTextRef.current || captureTextRef.current;
 
-      if (refToUse && typeof refToUse.measure === "function") {
-        refToUse.measure((_x, _y, _width, height) => {
-          // Log the measured height in the terminal for debugging
-          resolve(height);
-        });
-      } else {
-        // Fallback: measure the TextInput if available
-        if (textInputRef.current && typeof textInputRef.current.measure === "function") {
-          textInputRef.current.measure((_x, _y, _width, height) => {
-            resolve(height);
-          });
+        if (refToUse && typeof refToUse.measure === "function") {
+          // Add timeout to prevent hanging
+          const timeoutId = setTimeout(() => {
+            resolve(200); // Fallback height in pixels
+          }, 1000); // Timeout in milliseconds
+
+          try {
+            refToUse.measure((_x, _y, _width, height) => {
+              clearTimeout(timeoutId);
+              // Ensure we have a valid height value
+              const validHeight = height && height > 0 ? height : 200;
+              resolve(validHeight);
+            });
+          } catch (measureError) {
+            clearTimeout(timeoutId);
+            resolve(200); // Fallback height in pixels
+          }
         } else {
-          resolve(200); // Fallback height in pixels
+          // Fallback: measure the TextInput if available
+          if (textInputRef.current && typeof textInputRef.current.measure === "function") {
+            const timeoutId = setTimeout(() => {
+              resolve(200); // Fallback height in pixels
+            }, 1000); // Timeout in milliseconds
+
+            try {
+              textInputRef.current.measure((_x, _y, _width, height) => {
+                clearTimeout(timeoutId);
+                const validHeight = height && height > 0 ? height : 200;
+                resolve(validHeight);
+              });
+            } catch (measureError) {
+              clearTimeout(timeoutId);
+              resolve(200); // Fallback height in pixels
+            }
+          } else {
+            resolve(200); // Fallback height in pixels
+          }
         }
+      } catch (error) {
+        console.warn("Height measurement error:", error);
+        resolve(200); // Fallback height in pixels
       }
     });
   };
@@ -205,6 +240,11 @@ export default function App() {
 
   const saveToPhotos = async () => {
     try {
+      if (!text.trim()) {
+        Alert.alert("No Text", "Please enter some text before saving.");
+        return;
+      }
+
       // Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
@@ -218,18 +258,30 @@ export default function App() {
       // Dismiss keyboard for clean capture
       Keyboard.dismiss();
 
-      // Wait a moment for keyboard to hide and UI to update
-      setTimeout(async () => {
+      // Use a proper async function instead of mixing setTimeout with async/await
+      const performCapture = async () => {
         try {
           setIsCapturing(true);
 
+          // The capture ref should always be available now since it's always rendered
+
           // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
+          console.log("Attempting to capture with height:", captureHeight);
+
+          if (!captureTextRef.current) {
+            throw new Error("Capture reference is not available");
+          }
+
+          if (!captureTextRef.current) {
+            throw new Error("Capture reference is not available");
+          }
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -238,18 +290,28 @@ export default function App() {
             height: captureHeight,
           });
 
+          if (!uri) {
+            throw new Error("Failed to generate image");
+          }
+
+          console.log("Capture successful, saving to library:", uri);
+
           await MediaLibrary.saveToLibraryAsync(uri);
           Alert.alert("Success", "Image saved to Photos!");
         } catch (error) {
-          console.error("Capture error:", error);
-          Alert.alert("Error", "Failed to save image to Photos.");
+          console.error("Capture error details:", error);
+          Alert.alert("Error", `Failed to save image: ${error.message || "Unknown error"}`);
         } finally {
           setIsCapturing(false);
         }
-      }, 1000);
+      };
+
+      // Wait for keyboard to dismiss and UI to settle before capturing
+      setTimeout(performCapture, 1000); // Delay in milliseconds
     } catch (error) {
       console.error("Permission error:", error);
-      Alert.alert("Error", "Failed to save image to Photos.");
+      Alert.alert("Error", "Failed to request permissions.");
+      setIsCapturing(false);
     }
   };
 
@@ -263,23 +325,24 @@ export default function App() {
       // Dismiss keyboard for clean capture
       Keyboard.dismiss();
 
-      // Wait a moment for keyboard to hide and UI to update
-      setTimeout(async () => {
+      // Use a proper async function instead of mixing setTimeout with async/await
+      const performShare = async () => {
         try {
-          if (!captureTextRef.current) {
-            Alert.alert("Error", "Text area not ready for capture.");
-            return;
-          }
-
           setIsCapturing(true);
 
+          // The capture ref should always be available now since it's always rendered
+
           // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
+          if (!captureTextRef.current) {
+            throw new Error("Capture reference is not available");
+          }
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -302,7 +365,10 @@ export default function App() {
         } finally {
           setIsCapturing(false);
         }
-      }, 1000);
+      };
+
+      // Wait for keyboard to dismiss and UI to settle before sharing
+      setTimeout(performShare, 1000); // Delay in milliseconds
     } catch (error) {
       console.error("Share error:", error);
       Alert.alert("Error", "Failed to share image.");
@@ -319,23 +385,24 @@ export default function App() {
       // Dismiss keyboard for clean capture
       Keyboard.dismiss();
 
-      // Wait a moment for keyboard to hide and UI to update
-      setTimeout(async () => {
+      // Use a proper async function instead of mixing setTimeout with async/await
+      const performSocialsShare = async () => {
         try {
           setIsCapturing(true);
 
-          // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // The capture ref should always be available now since it's always rendered
 
-          if (!captureTextRef.current) {
-            Alert.alert("Error", "Text area not ready for capture.");
-            return;
-          }
+          // Wait a bit for the capture text to render
+          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
+          if (!captureTextRef.current) {
+            throw new Error("Capture reference is not available");
+          }
 
           const uri = await captureRef(captureTextRef.current, {
             format: "jpg",
@@ -359,7 +426,10 @@ export default function App() {
         } finally {
           setIsCapturing(false);
         }
-      }, 1000); // Delay in milliseconds
+      };
+
+      // Wait for keyboard to dismiss and UI to settle before sharing
+      setTimeout(performSocialsShare, 1000); // Delay in milliseconds
     } catch (error) {
       console.error("Socials share error:", error);
       Alert.alert("Error", "Failed to share to Instagram.");
@@ -460,38 +530,46 @@ export default function App() {
                 ]}
                 collapsable={false}
               >
-                {/* Hidden text for capture - only visible during capture */}
-                {isCapturing && text.length > 0 ? (
-                  <View
-                    ref={captureTextRef}
-                    style={[styles.captureContainer, { backgroundColor: currentBackgroundColor }]}
-                    collapsable={false}
+                {/* Hidden text for capture - always rendered but invisible when not capturing */}
+                <View
+                  ref={captureTextRef}
+                  style={[
+                    styles.captureContainer,
+                    {
+                      backgroundColor: currentBackgroundColor,
+                      opacity: isCapturing && text.length > 0 ? 1 : 0,
+                      pointerEvents: "none",
+                    },
+                  ]}
+                  collapsable={false}
+                >
+                  <Text
+                    style={[
+                      styles.captureText,
+                      {
+                        color: currentTextColor,
+                        fontSize: fontSize,
+                        textAlign: currentAlignment,
+                        fontFamily: currentFontFamily,
+                      },
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.captureText,
-                        {
-                          color: currentTextColor,
-                          fontSize: fontSize,
-                          textAlign: currentAlignment,
-                          fontFamily: currentFontFamily,
-                        },
-                      ]}
-                    >
-                      {text}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.watermark,
-                        {
-                          color: currentTextColor,
-                        },
-                      ]}
-                    >
-                      made with Hey Hannah
-                    </Text>
-                  </View>
-                ) : !startedWriting ? (
+                    {text}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.watermark,
+                      {
+                        color: currentTextColor,
+                      },
+                    ]}
+                  >
+                    made with Hey Hannah
+                  </Text>
+                </View>
+
+                {/* Placeholder text */}
+                {!startedWriting ? (
                   <Text
                     style={[
                       styles.placeholderText,
@@ -558,40 +636,52 @@ export default function App() {
           <View style={styles.previewOverlay}>
             <View style={styles.previewOverlayBackground} />
             {text.length > 0 ? (
-              <View
+              <ScrollView
                 style={[
-                  styles.previewContainerOverlay,
+                  styles.previewScrollContainer,
                   {
-                    backgroundColor: currentBackgroundColor,
-                    height: previewHeight,
-                    top: Dimensions.get("window").height / 2 - previewHeight / 2, // Center vertically on screen
+                    maxHeight: Dimensions.get("window").height - 100, // Leave space for margins in pixels
+                    top: 50, // Top margin in pixels
                   },
                 ]}
+                contentContainerStyle={{ flexGrow: 1 }}
+                showsVerticalScrollIndicator={false}
               >
-                <Text
+                <View
                   style={[
-                    styles.previewText,
+                    styles.previewContainerOverlay,
                     {
-                      color: currentTextColor,
-                      fontSize: fontSize,
-                      textAlign: currentAlignment,
-                      fontFamily: currentFontFamily,
+                      backgroundColor: currentBackgroundColor,
+                      height: previewHeight, // Use actual calculated height to match saved image
+                      width: Dimensions.get("window").width,
                     },
                   ]}
                 >
-                  {text}
-                </Text>
-                <Text
-                  style={[
-                    styles.watermark,
-                    {
-                      color: currentTextColor,
-                    },
-                  ]}
-                >
-                  made with Hey Hannah
-                </Text>
-              </View>
+                  <Text
+                    style={[
+                      styles.previewText,
+                      {
+                        color: currentTextColor,
+                        fontSize: fontSize,
+                        textAlign: currentAlignment,
+                        fontFamily: currentFontFamily,
+                      },
+                    ]}
+                  >
+                    {text}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.watermark,
+                      {
+                        color: currentTextColor,
+                      },
+                    ]}
+                  >
+                    made with Hey Hannah
+                  </Text>
+                </View>
+              </ScrollView>
             ) : (
               <View style={styles.emptyPreviewContainer}>
                 <Text style={styles.emptyPreviewText}>
@@ -686,14 +776,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "#000000", // Black background
   },
-  previewContainerOverlay: {
+  previewScrollContainer: {
     position: "absolute",
-    // width: Dimensions.get("window").width * 0.9, // 90% of screen width in pixels
-    // left: Dimensions.get("window").width * 0.05, // 5% margin on left in pixels
+    width: Dimensions.get("window").width,
+    left: 0,
+  },
+  previewContainerOverlay: {
     paddingTop: "5%",
     paddingBottom: "5%",
     borderRadius: 0,
-    // No paddingHorizontal - already handled by container positioning
+    minHeight: "100%",
   },
   previewText: {
     textAlignVertical: "top",
