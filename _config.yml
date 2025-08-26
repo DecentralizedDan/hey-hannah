@@ -2,12 +2,12 @@
 title: Hey Hannah - Your Text to Image App
 email: # Force redeploy trigger
 description: >-
-Have something to say? Write it in Hey Hannah and post it to your socials, 
-send it via iMessage or save & share it as a photo -- with 8 colors and 3 
-fonts to choose from! This app is free and open source.
+  Have something to say? Write it in Hey Hannah and post it to your socials, 
+  send it via iMessage or save & share it as a photo -- with 8 colors and 3 
+  fonts to choose from! This app is free and open source.
 
 baseurl: ""
-url: "https://decentralizeddan.github.io/hey-hannah/"
+url: "https://decentralizeddan.github.io/hey-hannah"
 
 # Build settings
 markdown: kramdown
