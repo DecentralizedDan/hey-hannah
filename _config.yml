@@ -1,6 +1,6 @@
 # Site settings
 title: Hey Hannah - Your Text to Image App
-email:
+email: # Force redeploy trigger
 description: >-
 Have something to say? Write it in Hey Hannah and post it to your socials, 
 send it via iMessage or save & share it as a photo -- with 8 colors and 3 
