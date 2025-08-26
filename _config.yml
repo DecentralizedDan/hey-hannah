@@ -1,18 +1,21 @@
 # Site settings
-title: Hey Hannah - Text to Image App
+title: Hey Hannah: Your Text to Image App
 email:
 description: >-
-  An open source iPhone app for creating text images. Convert text into JPG images
-  for sharing on social media, messaging, or other platforms.
+Have something to say? Write it in Hey Hannah and post it to your socials, 
+send it via iMessage or save & share it as a photo -- with 8 colors and 3 
+fonts to choose from! This app is free and open source.
+
 baseurl: ""
-url: "https://username.github.io"
+url: "https://heyhannah.app"
 
 # Build settings
 markdown: kramdown
-theme: minima
+remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-feed
-
+  - jekyll-remote-theme
+  
 # Exclude from processing
 exclude:
   - node_modules/
@@ -52,7 +55,7 @@ app:
   status: "In Development"
   license: "GPL-3.0"
   app_store_url: ""
-  github_repo: "https://github.com/username/hey-hannah"
+  github_repo: "https://github.com/DecentralizedDan/hey-hannah"
 
 # Color scheme
 colors:
@@ -77,4 +80,4 @@ features:
     description: "Choose from 8 colors for background and text"
 
 # Social links
-github_username: username
+github_username: DecentralizedDan
