@@ -33,9 +33,9 @@ exclude:
   - README.md
 
 # Collection settings
-collections:
-  features:
-    output: false
+# collections:
+#   features:
+#     output: false
 
 # Site configuration
 timezone: America/New_York
@@ -68,16 +68,16 @@ colors:
   - purple
   - orange
 
-# Features
-features:
-  - name: "Text Creation & Editing"
-    description: "Type and edit text with ease"
-  - name: "Image Export"
-    description: "Save text as JPG images"
-  - name: "Sharing"
-    description: "Copy images to clipboard or share to other apps"
-  - name: "Color Options"
-    description: "Choose from 8 colors for background and text"
+# Features (commented out - now in index.md)
+# features:
+#   - name: "Text Creation & Editing"
+#     description: "Type and edit text with ease"
+#   - name: "Image Export"
+#     description: "Save text as JPG images"
+#   - name: "Sharing"
+#     description: "Copy images to clipboard or share to other apps"
+#   - name: "Color Options"
+#     description: "Choose from 8 colors for background and text"
 
 # Social links
 github_username: DecentralizedDan

@@ -1,5 +1,5 @@
 ---
-layout: home
+layout: default
 ---
 
 An open source iPhone app for creating text images.
