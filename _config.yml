@@ -11,10 +11,9 @@ url: "https://decentralizeddan.github.io/hey-hannah"
 
 # Build settings
 markdown: kramdown
-remote_theme: pages-themes/cayman@v0.2.0
+theme: jekyll-theme-cayman
 plugins:
   - jekyll-feed
-  - jekyll-remote-theme
 
 # Exclude from processing
 exclude:

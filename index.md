@@ -1,5 +1,7 @@
 ---
 layout: default
+title: Hey Hannah - Your Text to Image App
+description: Have something to say? Write it in Hey Hannah and post it to your socials, send it via iMessage or save & share it as a photo -- with 8 colors and 3 fonts to choose from! This app is free and open source.
 ---
 
 An open source iPhone app for creating text images.
