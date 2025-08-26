@@ -1,5 +1,5 @@
 # Site settings
-title: Hey Hannah: Your Text to Image App
+title: Hey Hannah - Your Text to Image App
 email:
 description: >-
 Have something to say? Write it in Hey Hannah and post it to your socials, 
@@ -15,7 +15,7 @@ remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-feed
   - jekyll-remote-theme
-  
+
 # Exclude from processing
 exclude:
   - node_modules/
