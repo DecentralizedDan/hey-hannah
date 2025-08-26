@@ -1,5 +1,5 @@
 # Site settings
-title: Hey Hannah
+title: Hey Hannah - Text to Image App
 email:
 description: >-
   An open source iPhone app for creating text images. Convert text into JPG images
@@ -27,6 +27,7 @@ exclude:
   - Gemfile
   - Gemfile.lock
   - vendor/
+  - README.md
 
 # Collection settings
 collections:
