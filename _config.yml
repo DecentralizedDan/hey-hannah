@@ -11,7 +11,7 @@ url: "https://decentralizeddan.github.io/hey-hannah"
 
 # Build settings
 markdown: kramdown
-remote_theme: pages-themes/minimal@v0.2.0
+remote_theme: pages-themes/cayman@v0.2.0
 plugins:
   - jekyll-feed
   - jekyll-remote-theme
