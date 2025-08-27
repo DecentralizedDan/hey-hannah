@@ -11,10 +11,10 @@ Hey Hannah converts text into JPG images for sharing. Users create text-based im
 
 ## Features
 
-- **Text Creation & Editing**: Perfectly format your text, every time
+- **Text Creation & Editing**: Perfectly format your text every time
 - **Image Export**: Save your text as JPG images
-- **Sharing**: Copy images to clipboard, save as photos or share to other apps
-- **Color Options**: Choose from 8 colors for background and text
+- **Sharing**: Save your images as photos, iMessage them, or share them via socials
+- **Formatting Options**: Eight colors for background and text, three fonts, three alignments -- endless possibilities
 
 ## Distribution
 
@@ -22,7 +22,7 @@ Hey Hannah is a **free app** on the Apple App Store.
 
 ## Open Source
 
-This project is open source and accepts contributions. For now, I alone will decide what features and new code are accepted. Like it or fork it!
+This project is open source and accepts new feature ideas contributions.
 
 ## License
 
