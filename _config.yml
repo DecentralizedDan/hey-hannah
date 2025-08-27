@@ -25,7 +25,10 @@ exclude:
   - index.js
   - app.json
   - eas.json
-  - assets/
+  - assets/adaptive-icon.png
+  - assets/favicon.png
+  - assets/icon.png
+  - assets/splash-icon.png
   - generate-icon.html
   - Gemfile
   - Gemfile.lock
