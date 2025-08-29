@@ -18,6 +18,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
+import * as Clipboard from "expo-clipboard";
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -234,10 +235,45 @@ function AppContent() {
 
     Alert.alert("Share Text Image", "Choose how to share your text:", [
       { text: "Cancel", style: "cancel" },
-      { text: "Save to Photos", onPress: saveToPhotos },
-      { text: "Send Message", onPress: shareAsMessage },
-      { text: "Share to Socials (Instagram, etc.)", onPress: shareToSocials },
+      { text: "Save", onPress: saveToPhotos },
+      { text: "Copy", onPress: copyImageToClipboard },
+      { text: "Share", onPress: shareAsMessage },
     ]);
+  };
+
+  const copyImageToClipboard = async () => {
+    try {
+      if (!text.trim()) {
+        Alert.alert("No Text", "Please enter some text before copying.");
+        return;
+      }
+
+      setIsCapturing(true);
+
+      // Try copying the image first
+      try {
+        const uri = await captureRef(captureTextRef, {
+          format: "png",
+          quality: 1.0,
+          result: "tmpfile",
+        });
+
+        // Try setImageAsync with file URI first
+        await Clipboard.setImageAsync(uri);
+        Alert.alert("Success", "Image copied to clipboard!");
+      } catch (imageError) {
+        console.log("Image copy failed, copying text instead:", imageError);
+
+        // Fallback: copy just the text content
+        await Clipboard.setStringAsync(text);
+        Alert.alert("Text Copied", "Image copy failed, text copied instead.");
+      }
+    } catch (error) {
+      console.error("Error copying:", error);
+      Alert.alert("Error", "Failed to copy to clipboard.");
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const saveToPhotos = async () => {
@@ -374,67 +410,6 @@ function AppContent() {
     } catch (error) {
       console.error("Share error:", error);
       Alert.alert("Error", "Failed to share image.");
-    }
-  };
-
-  const shareToSocials = async () => {
-    try {
-      if (!text.trim()) {
-        Alert.alert("No Text", "Please enter some text before sharing.");
-        return;
-      }
-
-      // Dismiss keyboard for clean capture
-      Keyboard.dismiss();
-
-      // Use a proper async function instead of mixing setTimeout with async/await
-      const performSocialsShare = async () => {
-        try {
-          setIsCapturing(true);
-
-          // The capture ref should always be available now since it's always rendered
-
-          // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
-
-          const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-          const watermarkHeight = 40; // Space for watermark and margin in pixels
-          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
-
-          if (!captureTextRef.current) {
-            throw new Error("Capture reference is not available");
-          }
-
-          const uri = await captureRef(captureTextRef.current, {
-            format: "jpg",
-            quality: 1.0,
-            result: "tmpfile",
-            height: captureHeight,
-          });
-
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, {
-              mimeType: "image/jpeg",
-              dialogTitle: "Share to Socials (Instagram, etc.)",
-              UTI: "com.instagram.photo", // Hint for Instagram
-            });
-          } else {
-            Alert.alert("Error", "Sharing is not available on this device.");
-          }
-        } catch (error) {
-          console.error("Socials share error:", error);
-          Alert.alert("Error", `Failed to share to Instagram: ${error.message}`);
-        } finally {
-          setIsCapturing(false);
-        }
-      };
-
-      // Wait for keyboard to dismiss and UI to settle before sharing
-      setTimeout(performSocialsShare, 1000); // Delay in milliseconds
-    } catch (error) {
-      console.error("Socials share error:", error);
-      Alert.alert("Error", "Failed to share to Instagram.");
     }
   };
 
@@ -619,7 +594,7 @@ function AppContent() {
                     ]}
                     value={text}
                     onChangeText={handleTextChange}
-                    placeholder=""
+                    placeholder="fixing copy attempt 2"
                     multiline
                     scrollEnabled={true}
                     showsVerticalScrollIndicator={false}
