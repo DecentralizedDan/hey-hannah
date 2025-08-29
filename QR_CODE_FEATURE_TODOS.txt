@@ -1,0 +1,71 @@
+QR CODE FEATURE IMPLEMENTATION TODOS
+=====================================
+
+OVERVIEW:
+Add QR code generation and scanning functionality to Hey Hannah app.
+Users can generate QR codes that encode their text image configuration,
+and scan QR codes to recreate and modify shared text images.
+
+PHASE 1: SETUP & GENERATION
+---------------------------
+[ ] Install QR code dependencies (react-native-qrcode-svg, expo-barcode-scanner)
+[ ] Design QR data structure to encode text image configuration (text, colors, fonts, alignment, etc.)
+[ ] Add new state variables: showQRCode, qrCodeData, isScanning
+[ ] Create generateQRCode() function to serialize current app state into QR data
+[ ] Build QR code display modal component with QRCode from react-native-qrcode-svg
+
+PHASE 2: SCANNING & PARSING
+---------------------------
+[ ] Implement camera permission handling for QR code scanning
+[ ] Create QR scanner modal using BarCodeScanner from expo-barcode-scanner
+[ ] Build handleQRCodeScan() function to parse QR data and restore app state
+[ ] Add validation and error handling for invalid QR codes
+
+PHASE 3: UI & ENHANCEMENT
+-------------------------
+[ ] Add 'Generate QR Code' and 'Scan QR Code' buttons to main interface
+[ ] Add option to export image with QR code embedded (side-by-side layout)
+[ ] Test QR generation and scanning flow end-to-end
+
+TECHNICAL DETAILS:
+=================
+
+Dependencies to Add:
+- react-native-qrcode-svg
+- expo-barcode-scanner
+
+QR Data Structure:
+{
+  version: "1.0",
+  text: string,
+  backgroundColorIndex: number,
+  textColorIndex: number,
+  alignment: number,
+  fontSize: number,
+  fontFamily: number,
+  previewHeight: number
+}
+
+New State Variables:
+- showQRCode: boolean
+- qrCodeData: string
+- isScanning: boolean
+
+Key Functions to Implement:
+- generateQRCode(): Serialize app state to QR string
+- handleQRCodeScan(data): Parse QR data and restore state
+- requestCameraPermission(): Handle camera permissions
+
+USER EXPERIENCE FLOW:
+====================
+1. Generate QR: User creates text image → taps "Generate QR" → shows QR code modal
+2. Share QR: User can screenshot or share the QR code
+3. Scan QR: Another user opens app → taps "Scan QR" → camera opens → scans code → recreates original text image
+4. Export Both: Option to export image with QR code embedded
+
+BENEFITS:
+=========
+- Share the "recipe" for creating text images, not just the final result
+- Users can remix and modify shared configurations
+- Creates unique social sharing mechanism
+- Enables collaborative text image creation
