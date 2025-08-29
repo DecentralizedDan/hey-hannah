@@ -1,0 +1,46 @@
+---
+alwaysApply: true
+description: Require user confirmation for long-running processes
+---
+
+# Long-Running Process Confirmation Rule
+
+Always ask for explicit user confirmation before starting any process that could take a long time (more than 30 seconds) or consume significant resources.
+
+## Processes That Require Confirmation
+
+- **Expo Development Builds**: `eas build` commands (can take up to 4 hours)
+- **Package Installation**: Large package installs or updates
+- **File Generation**: Creating multiple files or large files
+- **Build Processes**: Any compilation or build commands
+- **Network Operations**: Large downloads, uploads, or API calls
+- **Database Operations**: Migrations, large data operations
+- **CI/CD Triggers**: Deployment or automated build triggers
+
+## Confirmation Format
+
+Before executing any long-running command, ask:
+
+```
+This process may take [estimated time] and will [brief description of what it does].
+Do you want to proceed? (y/n)
+```
+
+## Examples
+
+**Good:**
+
+- "This will create an Expo development build which can take up to 4 hours. Do you want to proceed?"
+- "Installing these dependencies may take 2-3 minutes. Should I continue?"
+
+**Bad:**
+
+- Starting `eas build` without warning about time
+- Running long npm installs without confirmation
+- Triggering deployments without user awareness
+
+## Exceptions
+
+- Quick operations under 30 seconds don't need confirmation
+- File reads, small edits, or simple commands
+- Operations explicitly requested by the user with full context
