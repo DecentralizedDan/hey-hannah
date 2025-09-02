@@ -345,6 +345,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = PDL66RNA4W;
 				ENABLE_BITCODE = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
@@ -383,6 +384,7 @@
 				CODE_SIGN_ENTITLEMENTS = HeyHannah/HeyHannah.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = PDL66RNA4W;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = HeyHannah/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Hey Hannah";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";

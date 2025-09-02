@@ -57,8 +57,8 @@ function AppContent() {
   const baseSize = 32; // font size in pixels
 
   const [text, setText] = useState("");
-  const [backgroundColorIndex, setBackgroundColorIndex] = useState(0);
-  const [textColorIndex, setTextColorIndex] = useState(0);
+  const [backgroundColorIndex, setBackgroundColorIndex] = useState(5); // default yellow background
+  const [textColorIndex, setTextColorIndex] = useState(3); // default blue text
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -70,17 +70,6 @@ function AppContent() {
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
   const measureTextRef = useRef(null);
-
-  // Initialize with random background color and complementary text color
-  useEffect(() => {
-    const randomBgIndex = Math.floor(Math.random() * COLORS.length);
-    const bgColor = COLORS[randomBgIndex];
-    const complementaryColor = COMPLEMENTARY_COLORS[bgColor];
-    const textIndex = COLORS.indexOf(complementaryColor);
-
-    setBackgroundColorIndex(randomBgIndex);
-    setTextColorIndex(textIndex);
-  }, []);
 
   // Calculate font size based on text length
   useEffect(() => {
@@ -156,7 +145,7 @@ function AppContent() {
 
             setPreviewHeight(calculatedHeight);
           } catch (error) {
-            console.warn("Height calculation error:", error);
+            if (__DEV__) console.warn("Height calculation error:", error);
             setPreviewHeight(400); // Fallback height in pixels
           }
         }
@@ -164,7 +153,7 @@ function AppContent() {
 
       setIsPreviewMode(!isPreviewMode);
     } catch (error) {
-      console.error("Preview mode toggle error:", error);
+      if (__DEV__) console.error("Preview mode toggle error:", error);
       // Still toggle preview mode even if calculation fails
       setIsPreviewMode(!isPreviewMode);
     }
@@ -221,7 +210,7 @@ function AppContent() {
           }
         }
       } catch (error) {
-        console.warn("Height measurement error:", error);
+        if (__DEV__) console.warn("Height measurement error:", error);
         resolve(200); // Fallback height in pixels
       }
     });
@@ -262,14 +251,14 @@ function AppContent() {
         await Clipboard.setImageAsync(uri);
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
-        console.log("Image copy failed, copying text instead:", imageError);
+        if (__DEV__) console.log("Image copy failed, copying text instead:", imageError);
 
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
         Alert.alert("Text Copied", "Image copy failed, text copied instead.");
       }
     } catch (error) {
-      console.error("Error copying:", error);
+      if (__DEV__) console.error("Error copying:", error);
       Alert.alert("Error", "Failed to copy to clipboard.");
     } finally {
       setIsCapturing(false);
@@ -311,7 +300,7 @@ function AppContent() {
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
-          console.log("Attempting to capture with height:", captureHeight);
+          if (__DEV__) console.log("Attempting to capture with height:", captureHeight);
 
           if (!captureTextRef.current) {
             throw new Error("Capture reference is not available");
@@ -332,12 +321,12 @@ function AppContent() {
             throw new Error("Failed to generate image");
           }
 
-          console.log("Capture successful, saving to library:", uri);
+          if (__DEV__) console.log("Capture successful, saving to library:", uri);
 
           await MediaLibrary.saveToLibraryAsync(uri);
           Alert.alert("Success", "Image saved to Photos!");
         } catch (error) {
-          console.error("Capture error details:", error);
+          if (__DEV__) console.error("Capture error details:", error);
           Alert.alert("Error", `Failed to save image: ${error.message || "Unknown error"}`);
         } finally {
           setIsCapturing(false);
@@ -347,7 +336,7 @@ function AppContent() {
       // Wait for keyboard to dismiss and UI to settle before capturing
       setTimeout(performCapture, 1000); // Delay in milliseconds
     } catch (error) {
-      console.error("Permission error:", error);
+      if (__DEV__) console.error("Permission error:", error);
       Alert.alert("Error", "Failed to request permissions.");
       setIsCapturing(false);
     }
@@ -398,7 +387,7 @@ function AppContent() {
             Alert.alert("Error", "Sharing is not available on this device.");
           }
         } catch (error) {
-          console.error("Share error:", error);
+          if (__DEV__) console.error("Share error:", error);
           Alert.alert("Error", `Failed to share image: ${error.message}`);
         } finally {
           setIsCapturing(false);
@@ -408,7 +397,7 @@ function AppContent() {
       // Wait for keyboard to dismiss and UI to settle before sharing
       setTimeout(performShare, 1000); // Delay in milliseconds
     } catch (error) {
-      console.error("Share error:", error);
+      if (__DEV__) console.error("Share error:", error);
       Alert.alert("Error", "Failed to share image.");
     }
   };
@@ -545,7 +534,6 @@ function AppContent() {
                   </Text>
                 </View>
 
-                {/* Placeholder text */}
                 {!startedWriting ? (
                   <Text
                     style={[
@@ -594,7 +582,7 @@ function AppContent() {
                     ]}
                     value={text}
                     onChangeText={handleTextChange}
-                    placeholder="fixing copy attempt 2"
+                    placeholder="Say something..."
                     multiline
                     scrollEnabled={true}
                     showsVerticalScrollIndicator={false}
