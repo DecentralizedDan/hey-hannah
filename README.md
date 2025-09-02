@@ -1,5 +1,7 @@
 # Hey Hannah
 
+![Hey Hannah Screenshot](assets/screenshot-1.png)
+
 An open source iPhone app for creating text images.
 
 ## Overview
