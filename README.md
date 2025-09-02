@@ -32,6 +32,8 @@ Use any color for background and text.
 
 Hey Hannah will be distributed as a **free app** on the Apple App Store.
 
+Visit our [project website](https://decentralizeddan.github.io/hey-hannah) for more information.
+
 ## Open Source
 
 This project is open source and accepts contributions.
@@ -43,6 +45,10 @@ _In development_
 ## Contributing
 
 _Guidelines will be added_
+
+## Privacy
+
+See our [Privacy Policy](privacy.md) for details on data handling and user privacy.
 
 ## License
 
