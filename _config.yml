@@ -2,10 +2,7 @@
 title: Hey Hannah - Your Text to Image App
 email: # Force redeploy trigger
 description: >-
-  Have something to say? Write it in Hey Hannah and post it to your socials, 
-  send it via iMessage or save & share it as a photo -- with 8 colors and 3 
-  fonts to choose from! This app is free and open source.
-
+Have something to say? Write it in Hey Hannah and post it to your socials, send it via iMessage or save & share it as a photo -- all free and open source.
 baseurl: "/hey-hannah"
 url: "https://decentralizeddan.github.io/hey-hannah"
 
@@ -41,7 +38,7 @@ exclude:
 #     output: false
 
 # Site configuration
-timezone: America/New_York
+timezone: America/Los_Angeles
 permalink: /:categories/:year/:month/:day/:title/
 
 # SEO settings
@@ -70,17 +67,6 @@ colors:
   - yellow
   - purple
   - orange
-
-# Features (commented out - now in index.md)
-# features:
-#   - name: "Text Creation & Editing"
-#     description: "Type and edit text with ease"
-#   - name: "Image Export"
-#     description: "Save text as JPG images"
-#   - name: "Sharing"
-#     description: "Copy images to clipboard or share to other apps"
-#   - name: "Color Options"
-#     description: "Choose from 8 colors for background and text"
 
 # Social links
 github_username: DecentralizedDan

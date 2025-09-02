@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Hey Hannah**  
-Effective Date: January 15, 2025  
+Effective Date: September 1st, 2025  
 Version: 1.0
 
 ---
