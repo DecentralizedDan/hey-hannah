@@ -19,6 +19,7 @@ import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system";
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -239,7 +240,6 @@ function AppContent() {
 
       setIsCapturing(true);
 
-      // Try copying the image first
       try {
         const uri = await captureRef(captureTextRef, {
           format: "png",
@@ -247,8 +247,25 @@ function AppContent() {
           result: "tmpfile",
         });
 
-        // Try setImageAsync with file URI first
+        // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
+        const info = await FileSystem.getInfoAsync(uri, { size: true });
+        const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
+
+        if (info?.size && info.size > maxBytes) {
+          if (__DEV__)
+            console.warn(
+              `Image size ${info.size} B exceeds pasteboard limit, falling back to text.`
+            );
+
+          await Clipboard.setStringAsync(text);
+
+          Alert.alert("Text Copied", "Image too large; copied text instead.");
+          return;
+        }
+
+        // Attempt to set the image on the clipboard
         await Clipboard.setImageAsync(uri);
+
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
         if (__DEV__) console.log("Image copy failed, copying text instead:", imageError);
@@ -546,9 +563,7 @@ function AppContent() {
                         opacity: 0.6, // 60% opacity
                       },
                     ]}
-                  >
-                    [start writing]
-                  </Text>
+                  ></Text>
                 ) : null}
 
                 {/* Invisible text for measurement - always rendered */}
