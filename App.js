@@ -238,10 +238,19 @@ function AppContent() {
         return;
       }
 
+      if (!captureTextRef.current) {
+        Alert.alert("Error", "Text rendering not ready. Please try again.");
+        return;
+      }
+
       setIsCapturing(true);
 
+      // Dismiss keyboard and wait for UI to settle
+      Keyboard.dismiss();
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Delay in milliseconds
+
       try {
-        const uri = await captureRef(captureTextRef, {
+        const uri = await captureRef(captureTextRef.current, {
           format: "png",
           quality: 1.0,
           result: "tmpfile",
@@ -272,7 +281,10 @@ function AppContent() {
 
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
-        Alert.alert("Text Copied", "Image copy failed, text copied instead.");
+        Alert.alert(
+          "Text Copied",
+          `Image copy failed: ${imageError.message || imageError.toString()}. Text copied instead.`
+        );
       }
     } catch (error) {
       if (__DEV__) console.error("Error copying:", error);
