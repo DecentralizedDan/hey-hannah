@@ -272,8 +272,13 @@ function AppContent() {
           return;
         }
 
-        // Attempt to set the image on the clipboard
-        await Clipboard.setImageAsync(uri);
+        // Convert image file to base64 for clipboard
+        const base64Image = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Attempt to set the image on the clipboard (no data URI prefix needed)
+        await Clipboard.setImageAsync(base64Image);
 
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
