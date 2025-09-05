@@ -60,7 +60,7 @@ For privacy questions or concerns, email **heyhannah.app@proton.me**
 
 ## 10. Changes to This Policy
 
-We may update this policy if app functionality changes. Updated versions will be posted on our GitHub Pages website at (https://decentralizeddan.github.io/hey-hannah/privacy/)[https://decentralizeddan.github.io/hey-hannah/privacy/]. We will increment the version number for any material changes. Your continued use of the app after updates constitutes acceptance of the revised policy.
+We may update this policy if app functionality changes. Updated versions will be posted on our GitHub Pages website at https://decentralizeddan.github.io/hey-hannah/privacy/ . We will increment the version number for any material changes. Your continued use of the app after updates constitutes acceptance of the revised policy.
 
 ## 11. Governing Law
 
