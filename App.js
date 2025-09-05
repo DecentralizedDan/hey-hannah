@@ -20,6 +20,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
+import piexif from "piexifjs";
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -34,17 +35,6 @@ const COLOR_VALUES = {
   orange: "#FFA500",
 };
 
-const COMPLEMENTARY_COLORS = {
-  white: "black",
-  black: "white",
-  red: "green",
-  blue: "orange",
-  green: "red",
-  yellow: "purple",
-  purple: "yellow",
-  orange: "blue",
-};
-
 const ALIGNMENTS = ["left", "center", "right"];
 
 const FONT_FAMILIES = [
@@ -52,6 +42,52 @@ const FONT_FAMILIES = [
   "Courier", // Built-in monospace font available on both iOS and Android
   "Times New Roman", // Classic serif font available on both iOS and Android
 ];
+
+// Helper function to add text metadata to JPEG images
+const addTextMetadataToImage = async (imageUri, text) => {
+  try {
+    // Only add metadata to JPEG images since EXIF is primarily for JPEG
+    if (!imageUri.toLowerCase().includes(".jpg") && !imageUri.toLowerCase().includes(".jpeg")) {
+      return imageUri; // Return original URI for non-JPEG images
+    }
+
+    // Read the image file as base64
+    const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Create EXIF data with the text in UserComment field
+    const exifObj = {
+      "0th": {},
+      Exif: {
+        [piexif.ExifIFD.UserComment]: text,
+      },
+      GPS: {},
+      "1st": {},
+      thumbnail: null,
+    };
+
+    // Convert EXIF object to bytes
+    const exifBytes = piexif.dump(exifObj);
+
+    // Insert EXIF data into the image
+    const modifiedBase64 = piexif.insert(exifBytes, "data:image/jpeg;base64," + base64Image);
+
+    // Remove the data URL prefix to get just the base64 string
+    const base64Data = modifiedBase64.replace("data:image/jpeg;base64,", "");
+
+    // Write the modified image to a new file
+    const modifiedImageUri = FileSystem.cacheDirectory + "modified_" + Date.now() + ".jpg";
+    await FileSystem.writeAsStringAsync(modifiedImageUri, base64Data, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return modifiedImageUri;
+  } catch (error) {
+    if (__DEV__) console.warn("Failed to add metadata to image:", error);
+    return imageUri; // Return original URI if metadata addition fails
+  }
+};
 
 function AppContent() {
   const insets = useSafeAreaInsets();
@@ -251,13 +287,16 @@ function AppContent() {
 
       try {
         const uri = await captureRef(captureTextRef.current, {
-          format: "png",
+          format: "jpg",
           quality: 1.0,
           result: "tmpfile",
         });
 
+        // Add text metadata to the image
+        const imageWithMetadata = await addTextMetadataToImage(uri, text);
+
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
-        const info = await FileSystem.getInfoAsync(uri, { size: true });
+        const info = await FileSystem.getInfoAsync(imageWithMetadata, { size: true });
         const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
 
         if (info?.size && info.size > maxBytes) {
@@ -273,7 +312,7 @@ function AppContent() {
         }
 
         // Convert image file to base64 for clipboard
-        const base64Image = await FileSystem.readAsStringAsync(uri, {
+        const base64Image = await FileSystem.readAsStringAsync(imageWithMetadata, {
           encoding: FileSystem.EncodingType.Base64,
         });
 
@@ -355,9 +394,13 @@ function AppContent() {
             throw new Error("Failed to generate image");
           }
 
-          if (__DEV__) console.log("Capture successful, saving to library:", uri);
+          if (__DEV__)
+            console.log("Capture successful, adding metadata and saving to library:", uri);
 
-          await MediaLibrary.saveToLibraryAsync(uri);
+          // Add text metadata to the image
+          const imageWithMetadata = await addTextMetadataToImage(uri, text);
+
+          await MediaLibrary.saveToLibraryAsync(imageWithMetadata);
           Alert.alert("Success", "Image saved to Photos!");
         } catch (error) {
           if (__DEV__) console.error("Capture error details:", error);
@@ -412,8 +455,11 @@ function AppContent() {
             height: captureHeight,
           });
 
+          // Add text metadata to the image
+          const imageWithMetadata = await addTextMetadataToImage(uri, text);
+
           if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, {
+            await Sharing.shareAsync(imageWithMetadata, {
               mimeType: "image/jpeg",
               dialogTitle: "Share your text image",
             });
