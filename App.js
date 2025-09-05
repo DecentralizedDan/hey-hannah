@@ -20,6 +20,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -34,16 +35,7 @@ const COLOR_VALUES = {
   orange: "#FFA500",
 };
 
-const COMPLEMENTARY_COLORS = {
-  white: "black",
-  black: "white",
-  red: "green",
-  blue: "orange",
-  green: "red",
-  yellow: "purple",
-  purple: "yellow",
-  orange: "blue",
-};
+const GOLDEN_COLOR = "#FFCC02";
 
 const ALIGNMENTS = ["left", "center", "right"];
 
@@ -67,6 +59,8 @@ function AppContent() {
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
   const [startedWriting, setStartedWriting] = useState(false);
   const [fontFamily, setFontFamily] = useState(0); // 0=default, 1=monospace
+  const [currentView, setCurrentView] = useState("create"); // 'create' or 'gallery'
+  const [galleryImages, setGalleryImages] = useState([]);
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -230,6 +224,107 @@ function AppContent() {
       { text: "Share", onPress: shareAsMessage },
     ]);
   };
+
+  // Gallery functions
+  const loadGalleryImages = async () => {
+    try {
+      const galleryData = await AsyncStorage.getItem("galleryImages");
+      if (galleryData) {
+        const images = JSON.parse(galleryData);
+        setGalleryImages(images);
+      }
+    } catch (error) {
+      if (__DEV__) console.error("Failed to load gallery:", error);
+    }
+  };
+
+  const saveToGallery = async () => {
+    try {
+      if (!text.trim()) return;
+
+      const galleryDir = FileSystem.documentDirectory + "gallery/";
+      await FileSystem.makeDirectoryAsync(galleryDir, { intermediates: true });
+
+      // Capture image
+      const uri = await captureRef(captureTextRef.current, {
+        format: "jpg",
+        quality: 1.0,
+        result: "tmpfile",
+      });
+
+      // Create permanent file
+      const timestamp = Date.now();
+      const filename = `text-image-${timestamp}.jpg`;
+      const permanentPath = galleryDir + filename;
+
+      // Copy from temp to permanent location
+      await FileSystem.copyAsync({
+        from: uri,
+        to: permanentPath,
+      });
+
+      // Save metadata
+      const metadata = {
+        id: timestamp,
+        filename,
+        path: permanentPath,
+        text: text.substring(0, 100), // Preview text in characters
+        backgroundColor: COLORS[backgroundColorIndex],
+        backgroundColorIndex,
+        textColor: COLORS[textColorIndex],
+        textColorIndex,
+        alignment,
+        fontFamily,
+        fontSize,
+        previewHeight,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Update gallery list
+      const newGalleryImages = [metadata, ...galleryImages];
+      setGalleryImages(newGalleryImages);
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem("galleryImages", JSON.stringify(newGalleryImages));
+
+      return true;
+    } catch (error) {
+      if (__DEV__) console.error("Failed to save to gallery:", error);
+      return false;
+    }
+  };
+
+  const restoreImageFromGallery = (imageData) => {
+    setText(imageData.text);
+    setBackgroundColorIndex(imageData.backgroundColorIndex);
+    setTextColorIndex(imageData.textColorIndex);
+    setAlignment(imageData.alignment);
+    setFontFamily(imageData.fontFamily);
+    setPreviewHeight(imageData.previewHeight);
+    setStartedWriting(true);
+    setCurrentView("create");
+  };
+
+  const handleNewImage = async () => {
+    const saved = await saveToGallery();
+    if (saved) {
+      // Reset to blank state
+      setText("");
+      setBackgroundColorIndex(5); // default yellow background
+      setTextColorIndex(3); // default blue text
+      setAlignment(0); // left alignment
+      setFontFamily(0); // default font
+      setFontSize(baseSize);
+      setPreviewHeight(400); // default height in pixels
+      setStartedWriting(false);
+      setIsPreviewMode(false);
+    }
+  };
+
+  // Load gallery on component mount
+  useEffect(() => {
+    loadGalleryImages();
+  }, []);
 
   const copyImageToClipboard = async () => {
     try {
@@ -447,8 +542,31 @@ function AppContent() {
           <View style={styles.flex}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
+            {/* Navigation elements */}
+            {!isPreviewMode && currentView === "create" && (
+              <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
+                <TouchableOpacity onPress={() => setCurrentView("gallery")}>
+                  <Text style={styles.navigationText}>Gallery</Text>
+                </TouchableOpacity>
+                {startedWriting && text.trim() && (
+                  <TouchableOpacity onPress={handleNewImage}>
+                    <Text style={styles.navigationText}>New</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {!isPreviewMode && currentView === "gallery" && (
+              <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
+                <View />
+                <TouchableOpacity onPress={() => setCurrentView("create")}>
+                  <Text style={styles.navigationText}>Create</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Controls at top */}
-            {!isPreviewMode && (
+            {!isPreviewMode && currentView === "create" && (
               <View style={[styles.topControlsContainer, { paddingTop: insets.top + 15 }]}>
                 {/* Background color control */}
                 <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
@@ -518,34 +636,77 @@ function AppContent() {
               </View>
             )}
 
-            {/* Main text area */}
-            <TouchableWithoutFeedback onPress={isPreviewMode ? exitPreviewMode : undefined}>
-              <View
-                ref={textAreaRef}
-                style={[
-                  styles.textContainer,
-                  {
-                    backgroundColor: isPreviewMode ? "#000000" : currentBackgroundColor,
-                  },
-                ]}
-                collapsable={false}
-              >
-                {/* Hidden text for capture - always rendered but invisible when not capturing */}
+            {/* Main content area */}
+            {currentView === "create" ? (
+              <TouchableWithoutFeedback onPress={isPreviewMode ? exitPreviewMode : undefined}>
                 <View
-                  ref={captureTextRef}
+                  ref={textAreaRef}
                   style={[
-                    styles.captureContainer,
+                    styles.textContainer,
                     {
-                      backgroundColor: currentBackgroundColor,
-                      opacity: isCapturing && text.length > 0 ? 1 : 0,
-                      pointerEvents: "none",
+                      backgroundColor: isPreviewMode ? "#000000" : currentBackgroundColor,
                     },
                   ]}
                   collapsable={false}
                 >
-                  <Text
+                  {/* Hidden text for capture - always rendered but invisible when not capturing */}
+                  <View
+                    ref={captureTextRef}
                     style={[
-                      styles.captureText,
+                      styles.captureContainer,
+                      {
+                        backgroundColor: currentBackgroundColor,
+                        opacity: isCapturing && text.length > 0 ? 1 : 0,
+                        pointerEvents: "none",
+                      },
+                    ]}
+                    collapsable={false}
+                  >
+                    <Text
+                      style={[
+                        styles.captureText,
+                        {
+                          color: currentTextColor,
+                          fontSize: fontSize,
+                          textAlign: currentAlignment,
+                          fontFamily: currentFontFamily,
+                        },
+                      ]}
+                    >
+                      {text}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.watermark,
+                        {
+                          color: currentTextColor,
+                        },
+                      ]}
+                    >
+                      made with Hey Hannah
+                    </Text>
+                  </View>
+
+                  {!startedWriting ? (
+                    <Text
+                      style={[
+                        styles.placeholderText,
+                        {
+                          color: currentTextColor,
+                          fontSize: fontSize,
+                          textAlign: currentAlignment,
+                          fontFamily: currentFontFamily,
+                          opacity: 0.6, // 60% opacity
+                        },
+                      ]}
+                    ></Text>
+                  ) : null}
+
+                  {/* Invisible text for measurement - always rendered */}
+                  <Text
+                    ref={measureTextRef}
+                    style={[
+                      styles.measureText,
                       {
                         color: currentTextColor,
                         fontSize: fontSize,
@@ -556,73 +717,88 @@ function AppContent() {
                   >
                     {text}
                   </Text>
-                  <Text
-                    style={[
-                      styles.watermark,
-                      {
-                        color: currentTextColor,
-                      },
-                    ]}
-                  >
-                    made with Hey Hannah
-                  </Text>
+
+                  {/* TextInput for user interaction - hidden during capture and preview */}
+                  {!isPreviewMode && (
+                    <TextInput
+                      ref={textInputRef}
+                      style={[
+                        styles.textInput,
+                        {
+                          color: isCapturing ? "transparent" : currentTextColor,
+                          fontSize: fontSize,
+                          textAlign: currentAlignment,
+                          fontFamily: currentFontFamily,
+                        },
+                      ]}
+                      value={text}
+                      onChangeText={handleTextChange}
+                      placeholder="Say something..."
+                      multiline
+                      scrollEnabled={true}
+                      showsVerticalScrollIndicator={false}
+                      textAlignVertical="top"
+                    />
+                  )}
                 </View>
-
-                {!startedWriting ? (
-                  <Text
-                    style={[
-                      styles.placeholderText,
-                      {
-                        color: currentTextColor,
-                        fontSize: fontSize,
-                        textAlign: currentAlignment,
-                        fontFamily: currentFontFamily,
-                        opacity: 0.6, // 60% opacity
-                      },
-                    ]}
-                  ></Text>
-                ) : null}
-
-                {/* Invisible text for measurement - always rendered */}
-                <Text
-                  ref={measureTextRef}
-                  style={[
-                    styles.measureText,
-                    {
-                      color: currentTextColor,
-                      fontSize: fontSize,
-                      textAlign: currentAlignment,
-                      fontFamily: currentFontFamily,
-                    },
-                  ]}
+              </TouchableWithoutFeedback>
+            ) : (
+              /* Gallery view */
+              <View style={styles.galleryContainer}>
+                <ScrollView
+                  style={styles.galleryScrollView}
+                  contentContainerStyle={styles.galleryContent}
+                  showsVerticalScrollIndicator={false}
                 >
-                  {text}
-                </Text>
-
-                {/* TextInput for user interaction - hidden during capture and preview */}
-                {!isPreviewMode && (
-                  <TextInput
-                    ref={textInputRef}
-                    style={[
-                      styles.textInput,
-                      {
-                        color: isCapturing ? "transparent" : currentTextColor,
-                        fontSize: fontSize,
-                        textAlign: currentAlignment,
-                        fontFamily: currentFontFamily,
-                      },
-                    ]}
-                    value={text}
-                    onChangeText={handleTextChange}
-                    placeholder="Say something..."
-                    multiline
-                    scrollEnabled={true}
-                    showsVerticalScrollIndicator={false}
-                    textAlignVertical="top"
-                  />
-                )}
+                  {galleryImages.length === 0 ? (
+                    <View style={styles.emptyGalleryContainer}>
+                      <Text style={styles.emptyGalleryText}>
+                        No saved images yet. Create some text art and use "New" to save it!
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.thumbnailGrid}>
+                      {galleryImages.map((image) => (
+                        <TouchableOpacity
+                          key={image.id}
+                          style={styles.thumbnailContainer}
+                          onPress={() => restoreImageFromGallery(image)}
+                        >
+                          <View
+                            style={[
+                              styles.thumbnail,
+                              { backgroundColor: COLOR_VALUES[image.backgroundColor] },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.thumbnailText,
+                                {
+                                  color: COLOR_VALUES[image.textColor],
+                                  fontSize: image.fontSize * 0.33, // 33% of original size
+                                  textAlign: ALIGNMENTS[image.alignment],
+                                  fontFamily:
+                                    FONT_FAMILIES[image.fontFamily] === "System"
+                                      ? undefined
+                                      : FONT_FAMILIES[image.fontFamily],
+                                },
+                              ]}
+                              numberOfLines={3}
+                              ellipsizeMode="tail"
+                            >
+                              {image.text}
+                            </Text>
+                          </View>
+                          <Text style={styles.thumbnailDate}>
+                            {new Date(image.createdAt).toLocaleDateString()}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </ScrollView>
               </View>
-            </TouchableWithoutFeedback>
+            )}
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -876,6 +1052,71 @@ const styles = StyleSheet.create({
   controlLabel: {
     fontSize: 10, // Label text size in pixels
     fontWeight: "bold",
+  },
+  navigationContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20, // Horizontal padding in pixels
+    paddingVertical: 10, // Vertical padding in pixels
+    backgroundColor: "#000000", // Black background
+  },
+  navigationText: {
+    color: GOLDEN_COLOR,
+    fontSize: 14, // Navigation text size in pixels
+    fontWeight: "500",
+  },
+  galleryContainer: {
+    flex: 1,
+    backgroundColor: "#000000", // Black background
+  },
+  galleryScrollView: {
+    flex: 1,
+  },
+  galleryContent: {
+    padding: 20, // Content padding in pixels
+  },
+  emptyGalleryContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 100, // Vertical padding in pixels
+  },
+  emptyGalleryText: {
+    color: "#FFFFFF", // White text
+    fontSize: 16, // Font size in pixels
+    textAlign: "center",
+    fontStyle: "italic",
+    opacity: 0.7,
+    paddingHorizontal: 40, // Horizontal padding in pixels
+  },
+  thumbnailGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  thumbnailContainer: {
+    width: "31%", // Three columns with gaps
+    marginBottom: 20, // Bottom margin in pixels
+  },
+  thumbnail: {
+    height: 180, // Fixed height representing iPhone screen in pixels
+    borderRadius: 8, // Corner radius in pixels
+    padding: 10, // Inner padding in pixels
+    justifyContent: "flex-start",
+    alignItems: "center",
+    overflow: "hidden", // Clip content that exceeds height
+  },
+  thumbnailText: {
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  thumbnailDate: {
+    color: GOLDEN_COLOR,
+    fontSize: 12, // Date text size in pixels
+    textAlign: "center",
+    marginTop: 5, // Top margin in pixels
+    opacity: 0.8,
   },
 });
 
