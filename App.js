@@ -20,6 +20,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
+import { RNShake } from "react-native-shake";
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -97,6 +98,17 @@ function AppContent() {
     setFontSize(calculateSize());
   }, [text]);
 
+  // Setup shake detection
+  useEffect(() => {
+    const subscription = RNShake.addListener(() => {
+      handleShakeGesture();
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
   const cycleBackgroundColor = () => {
     setBackgroundColorIndex((prev) => (prev + 1) % COLORS.length);
   };
@@ -127,6 +139,27 @@ function AppContent() {
     setText(newText);
     if (newText.length > 0 && !startedWriting) {
       setStartedWriting(true);
+    }
+  };
+
+  const handleShakeGesture = () => {
+    // Only clear text if there is text to clear
+    if (text.length > 0) {
+      Alert.alert("Clear Text", "Shake detected! Do you want to clear the current text?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => {
+            setText("");
+            setStartedWriting(false);
+            // Exit preview mode if active
+            if (isPreviewMode) {
+              setIsPreviewMode(false);
+            }
+          },
+        },
+      ]);
     }
   };
 
