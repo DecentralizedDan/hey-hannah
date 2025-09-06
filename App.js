@@ -20,7 +20,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// Using FileSystem for simple JSON storage
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
 
@@ -228,8 +228,10 @@ function AppContent() {
   // Gallery functions
   const loadGalleryImages = async () => {
     try {
-      const galleryData = await AsyncStorage.getItem("galleryImages");
-      if (galleryData) {
+      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+      const fileInfo = await FileSystem.getInfoAsync(galleryMetadataPath);
+      if (fileInfo.exists) {
+        const galleryData = await FileSystem.readAsStringAsync(galleryMetadataPath);
         const images = JSON.parse(galleryData);
         setGalleryImages(images);
       }
@@ -284,8 +286,9 @@ function AppContent() {
       const newGalleryImages = [metadata, ...galleryImages];
       setGalleryImages(newGalleryImages);
 
-      // Save to AsyncStorage
-      await AsyncStorage.setItem("galleryImages", JSON.stringify(newGalleryImages));
+      // Save to FileSystem
+      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(newGalleryImages));
 
       return true;
     } catch (error) {
