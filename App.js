@@ -284,8 +284,8 @@ function AppContent() {
         createdAt: new Date().toISOString(),
       };
 
-      // Update gallery list
-      const newGalleryImages = [metadata, ...galleryImages];
+      // Update gallery list - add new images at the end so first created appears first
+      const newGalleryImages = [...galleryImages, metadata];
       setGalleryImages(newGalleryImages);
 
       // Save to FileSystem
@@ -611,7 +611,7 @@ function AppContent() {
 
             {/* Controls at top */}
             {!isPreviewMode && currentView === "create" && (
-              <View style={[styles.topControlsContainer, { paddingTop: insets.top + 15 }]}>
+              <View style={[styles.topControlsContainer, { paddingTop: 20 }]}>
                 {/* Background color control */}
                 <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
                   <View
@@ -802,8 +802,15 @@ function AppContent() {
                     </View>
                   ) : (
                     <View style={styles.thumbnailGrid}>
-                      {galleryImages.map((image) => (
-                        <View key={image.id} style={styles.thumbnailContainer}>
+                      {galleryImages.map((image, index) => (
+                        <View
+                          key={image.id}
+                          style={[
+                            styles.thumbnailContainer,
+                            // Remove right margin for every 3rd item (right column)
+                            (index + 1) % 3 === 0 && { marginRight: 0 },
+                          ]}
+                        >
                           <TouchableOpacity
                             style={styles.thumbnailTouchable}
                             onPress={() => restoreImageFromGallery(image)}
@@ -1072,7 +1079,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 15, // Vertical padding in pixels
+    paddingVertical: 5, // Vertical padding in pixels
     paddingHorizontal: 20, // Horizontal padding in pixels
     backgroundColor: "#000000", // Black background for controls
   },
@@ -1135,7 +1142,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20, // Horizontal padding in pixels
-    paddingVertical: 10, // Vertical padding in pixels
+    paddingVertical: 5, // Vertical padding in pixels
     backgroundColor: "#000000", // Black background
   },
   navigationText: {
@@ -1170,11 +1177,12 @@ const styles = StyleSheet.create({
   thumbnailGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
   },
   thumbnailContainer: {
     width: "31%", // Three columns with gaps
     marginBottom: 20, // Bottom margin in pixels
+    marginRight: "3.5%", // Right margin for spacing between columns
   },
   thumbnail: {
     height: 180, // Fixed height representing iPhone screen in pixels
