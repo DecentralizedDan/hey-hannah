@@ -63,6 +63,7 @@ function AppContent() {
   const [galleryImages, setGalleryImages] = useState([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
+  const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -288,6 +289,9 @@ function AppContent() {
       const newGalleryImages = [...galleryImages, metadata];
       setGalleryImages(newGalleryImages);
 
+      // Set this image as the currently active one for live thumbnail updates
+      setActiveImageId(metadata.id);
+
       // Save to FileSystem
       const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
       await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(newGalleryImages));
@@ -307,6 +311,7 @@ function AppContent() {
     setFontFamily(imageData.fontFamily);
     setPreviewHeight(imageData.previewHeight);
     setStartedWriting(true);
+    setActiveImageId(imageData.id); // Track that this image is being edited
     setCurrentView("create");
   };
 
@@ -323,6 +328,7 @@ function AppContent() {
       setPreviewHeight(400); // default height in pixels
       setStartedWriting(false);
       setIsPreviewMode(false);
+      setActiveImageId(null); // Clear active image tracking
     }
   };
 
@@ -818,26 +824,46 @@ function AppContent() {
                             <View
                               style={[
                                 styles.thumbnail,
-                                { backgroundColor: COLOR_VALUES[image.backgroundColor] },
+                                {
+                                  backgroundColor:
+                                    activeImageId === image.id
+                                      ? COLORS[backgroundColorIndex]
+                                      : COLOR_VALUES[image.backgroundColor],
+                                },
                               ]}
                             >
                               <Text
                                 style={[
                                   styles.thumbnailText,
                                   {
-                                    color: COLOR_VALUES[image.textColor],
-                                    fontSize: image.fontSize * 0.33, // 33% of original size
-                                    textAlign: ALIGNMENTS[image.alignment],
+                                    color:
+                                      activeImageId === image.id
+                                        ? COLORS[textColorIndex]
+                                        : COLOR_VALUES[image.textColor],
+                                    fontSize:
+                                      (activeImageId === image.id ? fontSize : image.fontSize) *
+                                      0.21, // Precisely tuned to match original character density
+                                    textAlign:
+                                      activeImageId === image.id
+                                        ? ALIGNMENTS[alignment]
+                                        : ALIGNMENTS[image.alignment],
                                     fontFamily:
-                                      FONT_FAMILIES[image.fontFamily] === "System"
+                                      activeImageId === image.id
+                                        ? FONT_FAMILIES[fontFamily] === "System"
+                                          ? undefined
+                                          : FONT_FAMILIES[fontFamily]
+                                        : FONT_FAMILIES[image.fontFamily] === "System"
                                         ? undefined
                                         : FONT_FAMILIES[image.fontFamily],
                                   },
                                 ]}
-                                numberOfLines={3}
+                                numberOfLines={
+                                  (activeImageId === image.id ? text : image.text).split("\n")
+                                    .length
+                                }
                                 ellipsizeMode="tail"
                               >
-                                {image.text}
+                                {activeImageId === image.id ? text : image.text}
                               </Text>
                             </View>
                             <Text style={styles.thumbnailDate}>
@@ -1185,15 +1211,14 @@ const styles = StyleSheet.create({
     marginRight: "3.5%", // Right margin for spacing between columns
   },
   thumbnail: {
-    height: 180, // Fixed height representing iPhone screen in pixels
+    aspectRatio: 9 / 12.8, // 20% shorter height than iPhone screen ratio
     borderRadius: 8, // Corner radius in pixels
     padding: 10, // Inner padding in pixels
     justifyContent: "flex-start",
-    alignItems: "center",
+    alignItems: "left",
     overflow: "hidden", // Clip content that exceeds height
   },
   thumbnailText: {
-    textAlign: "center",
     fontWeight: "500",
   },
   thumbnailDate: {
