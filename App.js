@@ -61,6 +61,8 @@ function AppContent() {
   const [fontFamily, setFontFamily] = useState(0); // 0=default, 1=monospace
   const [currentView, setCurrentView] = useState("create"); // 'create' or 'gallery'
   const [galleryImages, setGalleryImages] = useState([]);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -322,6 +324,45 @@ function AppContent() {
       setStartedWriting(false);
       setIsPreviewMode(false);
     }
+  };
+
+  const deleteImageFromGallery = async (imageId) => {
+    try {
+      // Find the image to delete
+      const imageToDelete = galleryImages.find((img) => img.id === imageId);
+      if (!imageToDelete) return;
+
+      // Delete the image file
+      const fileInfo = await FileSystem.getInfoAsync(imageToDelete.path);
+      if (fileInfo.exists) {
+        await FileSystem.deleteAsync(imageToDelete.path);
+      }
+
+      // Update gallery list
+      const updatedImages = galleryImages.filter((img) => img.id !== imageId);
+      setGalleryImages(updatedImages);
+
+      // Save updated list to FileSystem
+      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(updatedImages));
+
+      // Close modal
+      setDeleteModalVisible(false);
+      setImageToDelete(null);
+    } catch (error) {
+      if (__DEV__) console.error("Failed to delete image:", error);
+      Alert.alert("Error", "Failed to delete image.");
+    }
+  };
+
+  const confirmDelete = (image) => {
+    setImageToDelete(image);
+    setDeleteModalVisible(true);
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalVisible(false);
+    setImageToDelete(null);
   };
 
   // Load gallery on component mount
@@ -762,40 +803,47 @@ function AppContent() {
                   ) : (
                     <View style={styles.thumbnailGrid}>
                       {galleryImages.map((image) => (
-                        <TouchableOpacity
-                          key={image.id}
-                          style={styles.thumbnailContainer}
-                          onPress={() => restoreImageFromGallery(image)}
-                        >
-                          <View
-                            style={[
-                              styles.thumbnail,
-                              { backgroundColor: COLOR_VALUES[image.backgroundColor] },
-                            ]}
+                        <View key={image.id} style={styles.thumbnailContainer}>
+                          <TouchableOpacity
+                            style={styles.thumbnailTouchable}
+                            onPress={() => restoreImageFromGallery(image)}
                           >
-                            <Text
+                            <View
                               style={[
-                                styles.thumbnailText,
-                                {
-                                  color: COLOR_VALUES[image.textColor],
-                                  fontSize: image.fontSize * 0.33, // 33% of original size
-                                  textAlign: ALIGNMENTS[image.alignment],
-                                  fontFamily:
-                                    FONT_FAMILIES[image.fontFamily] === "System"
-                                      ? undefined
-                                      : FONT_FAMILIES[image.fontFamily],
-                                },
+                                styles.thumbnail,
+                                { backgroundColor: COLOR_VALUES[image.backgroundColor] },
                               ]}
-                              numberOfLines={3}
-                              ellipsizeMode="tail"
                             >
-                              {image.text}
+                              <Text
+                                style={[
+                                  styles.thumbnailText,
+                                  {
+                                    color: COLOR_VALUES[image.textColor],
+                                    fontSize: image.fontSize * 0.33, // 33% of original size
+                                    textAlign: ALIGNMENTS[image.alignment],
+                                    fontFamily:
+                                      FONT_FAMILIES[image.fontFamily] === "System"
+                                        ? undefined
+                                        : FONT_FAMILIES[image.fontFamily],
+                                  },
+                                ]}
+                                numberOfLines={3}
+                                ellipsizeMode="tail"
+                              >
+                                {image.text}
+                              </Text>
+                            </View>
+                            <Text style={styles.thumbnailDate}>
+                              {new Date(image.createdAt).toLocaleDateString()}
                             </Text>
-                          </View>
-                          <Text style={styles.thumbnailDate}>
-                            {new Date(image.createdAt).toLocaleDateString()}
-                          </Text>
-                        </TouchableOpacity>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => confirmDelete(image)}
+                          >
+                            <Text style={styles.deleteButtonText}>✕</Text>
+                          </TouchableOpacity>
+                        </View>
                       ))}
                     </View>
                   )}
@@ -867,6 +915,32 @@ function AppContent() {
             )}
           </View>
         </TouchableWithoutFeedback>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModalVisible && (
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <Text style={styles.deleteModalTitle}>Delete Image</Text>
+            <Text style={styles.deleteModalMessage}>
+              Are you sure you want to delete this image? This action cannot be undone.
+            </Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.cancelButton]}
+                onPress={cancelDelete}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.confirmButton]}
+                onPress={() => deleteImageFromGallery(imageToDelete?.id)}
+              >
+                <Text style={styles.confirmButtonText}>Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       )}
     </>
   );
@@ -1120,6 +1194,88 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 5, // Top margin in pixels
     opacity: 0.8,
+  },
+  thumbnailTouchable: {
+    flex: 1,
+  },
+  deleteButton: {
+    position: "absolute",
+    top: -5, // Top offset in pixels
+    right: -5, // Right offset in pixels
+    width: 24, // Button width in pixels
+    height: 24, // Button height in pixels
+    borderRadius: 12, // Corner radius in pixels
+    backgroundColor: "#FF0000", // Red background
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10, // Ensure it's above thumbnail
+  },
+  deleteButtonText: {
+    color: "#FFFFFF", // White text
+    fontSize: 14, // Font size in pixels
+    fontWeight: "bold",
+    lineHeight: 16, // Line height in pixels
+  },
+  deleteModalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)", // Semi-transparent black overlay
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1001, // Above everything else
+  },
+  deleteModalContainer: {
+    backgroundColor: "#FFFFFF", // White background
+    borderRadius: 12, // Corner radius in pixels
+    padding: 20, // Container padding in pixels
+    margin: 20, // Container margin in pixels
+    maxWidth: 300, // Maximum width in pixels
+    width: "80%",
+  },
+  deleteModalTitle: {
+    fontSize: 18, // Title text size in pixels
+    fontWeight: "bold",
+    color: "#000000", // Black text
+    textAlign: "center",
+    marginBottom: 10, // Bottom margin in pixels
+  },
+  deleteModalMessage: {
+    fontSize: 16, // Message text size in pixels
+    color: "#333333", // Dark gray text
+    textAlign: "center",
+    marginBottom: 20, // Bottom margin in pixels
+    lineHeight: 22, // Line height in pixels
+  },
+  deleteModalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  deleteModalButton: {
+    flex: 1,
+    padding: 12, // Button padding in pixels
+    borderRadius: 8, // Corner radius in pixels
+    marginHorizontal: 5, // Horizontal margin in pixels
+  },
+  cancelButton: {
+    backgroundColor: "#E0E0E0", // Light gray background
+  },
+  confirmButton: {
+    backgroundColor: "#FF0000", // Red background
+  },
+  cancelButtonText: {
+    color: "#333333", // Dark gray text
+    fontSize: 16, // Font size in pixels
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  confirmButtonText: {
+    color: "#FFFFFF", // White text
+    fontSize: 16, // Font size in pixels
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
 
