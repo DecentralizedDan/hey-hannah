@@ -64,6 +64,7 @@ function AppContent() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
   const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
+  const [gallerySortMode, setGallerySortMode] = useState("newest"); // 'newest', 'oldest', 'random'
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -110,11 +111,41 @@ function AppContent() {
     setFontFamily((prev) => (prev + 1) % FONT_FAMILIES.length);
   };
 
+  const toggleGallerySortMode = () => {
+    setGallerySortMode((prev) => {
+      if (prev === "newest") return "oldest";
+      if (prev === "oldest") return "random";
+      return "newest"; // from random back to newest
+    });
+  };
+
   const currentAlignment = ALIGNMENTS[alignment];
   const currentBackgroundColor = COLOR_VALUES[COLORS[backgroundColorIndex]];
   const currentFontFamily =
     FONT_FAMILIES[fontFamily] === "System" ? undefined : FONT_FAMILIES[fontFamily];
   const currentTextColor = COLOR_VALUES[COLORS[textColorIndex]];
+
+  // Create sorted gallery images based on current sort mode
+  const getSortedGalleryImages = () => {
+    const imagesCopy = [...galleryImages];
+
+    switch (gallerySortMode) {
+      case "oldest":
+        return imagesCopy.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      case "random":
+        // Fisher-Yates shuffle algorithm
+        for (let i = imagesCopy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [imagesCopy[i], imagesCopy[j]] = [imagesCopy[j], imagesCopy[i]];
+        }
+        return imagesCopy;
+      case "newest":
+      default:
+        return imagesCopy.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+  };
+
+  const sortedGalleryImages = getSortedGalleryImages();
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
@@ -216,11 +247,11 @@ function AppContent() {
 
   const handleShare = () => {
     if (!text.trim()) {
-      Alert.alert("No Text", "Please enter some text before sharing.");
+      Alert.alert("No Text", "Please write something before sharing.");
       return;
     }
 
-    Alert.alert("Share Text Image", "Choose how to share your text:", [
+    Alert.alert("Share Text Image", "How will you share your text:", [
       { text: "Cancel", style: "cancel" },
       { text: "Save", onPress: saveToPhotos },
       { text: "Copy", onPress: copyImageToClipboard },
@@ -236,7 +267,9 @@ function AppContent() {
       if (fileInfo.exists) {
         const galleryData = await FileSystem.readAsStringAsync(galleryMetadataPath);
         const images = JSON.parse(galleryData);
-        setGalleryImages(images);
+        // Sort by creation date descending (newest first)
+        const sortedImages = images.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setGalleryImages(sortedImages);
       }
     } catch (error) {
       if (__DEV__) console.error("Failed to load gallery:", error);
@@ -285,8 +318,8 @@ function AppContent() {
         createdAt: new Date().toISOString(),
       };
 
-      // Update gallery list - add new images at the end so first created appears first
-      const newGalleryImages = [...galleryImages, metadata];
+      // Update gallery list - add new images at the beginning so newest appears first
+      const newGalleryImages = [metadata, ...galleryImages];
       setGalleryImages(newGalleryImages);
 
       // Set this image as the currently active one for live thumbnail updates
@@ -379,7 +412,7 @@ function AppContent() {
   const copyImageToClipboard = async () => {
     try {
       if (!text.trim()) {
-        Alert.alert("No Text", "Please enter some text before copying.");
+        Alert.alert("No Text", "Please write something before copying.");
         return;
       }
 
@@ -447,7 +480,7 @@ function AppContent() {
   const saveToPhotos = async () => {
     try {
       if (!text.trim()) {
-        Alert.alert("No Text", "Please enter some text before saving.");
+        Alert.alert("No Text", "Please write something before saving.");
         return;
       }
 
@@ -608,9 +641,17 @@ function AppContent() {
 
             {!isPreviewMode && currentView === "gallery" && (
               <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-                <View />
+                <TouchableOpacity onPress={toggleGallerySortMode}>
+                  <Text style={styles.navigationText}>
+                    {gallerySortMode === "newest"
+                      ? "Newest"
+                      : gallerySortMode === "oldest"
+                      ? "Oldest"
+                      : "Random"}
+                  </Text>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => setCurrentView("create")}>
-                  <Text style={styles.navigationText}>Create</Text>
+                  <Text style={styles.navigationText}>Edit</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -800,7 +841,7 @@ function AppContent() {
                   contentContainerStyle={styles.galleryContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  {galleryImages.length === 0 ? (
+                  {sortedGalleryImages.length === 0 ? (
                     <View style={styles.emptyGalleryContainer}>
                       <Text style={styles.emptyGalleryText}>
                         No saved images yet. Create some text art and use "New" to save it!
@@ -808,76 +849,114 @@ function AppContent() {
                     </View>
                   ) : (
                     <View style={styles.thumbnailGrid}>
-                      {galleryImages.map((image, index) => (
-                        <View
-                          key={image.id}
-                          style={[
-                            styles.thumbnailContainer,
-                            // Remove right margin for every 3rd item (right column)
-                            (index + 1) % 3 === 0 && { marginRight: 0 },
-                          ]}
-                        >
-                          <TouchableOpacity
-                            style={styles.thumbnailTouchable}
-                            onPress={() => restoreImageFromGallery(image)}
-                          >
+                      {/* Show current work-in-progress image first if text exists and no active image */}
+                      {text.trim() && !activeImageId && (
+                        <View style={[styles.thumbnailContainer, styles.currentWorkContainer]}>
+                          <View style={styles.thumbnailTouchable}>
                             <View
                               style={[
-                                styles.thumbnail,
-                                {
-                                  backgroundColor:
-                                    activeImageId === image.id
-                                      ? COLORS[backgroundColorIndex]
-                                      : COLOR_VALUES[image.backgroundColor],
-                                },
+                                styles.thumbnailPreview,
+                                { backgroundColor: COLORS[backgroundColorIndex] },
                               ]}
                             >
                               <Text
                                 style={[
                                   styles.thumbnailText,
                                   {
-                                    color:
-                                      activeImageId === image.id
-                                        ? COLORS[textColorIndex]
-                                        : COLOR_VALUES[image.textColor],
-                                    fontSize:
-                                      (activeImageId === image.id ? fontSize : image.fontSize) *
-                                      0.21, // Precisely tuned to match original character density
+                                    color: COLORS[textColorIndex],
                                     textAlign:
-                                      activeImageId === image.id
-                                        ? ALIGNMENTS[alignment]
-                                        : ALIGNMENTS[image.alignment],
-                                    fontFamily:
-                                      activeImageId === image.id
-                                        ? FONT_FAMILIES[fontFamily] === "System"
-                                          ? undefined
-                                          : FONT_FAMILIES[fontFamily]
-                                        : FONT_FAMILIES[image.fontFamily] === "System"
-                                        ? undefined
-                                        : FONT_FAMILIES[image.fontFamily],
+                                      alignment === 0
+                                        ? "left"
+                                        : alignment === 1
+                                        ? "center"
+                                        : "right",
+                                    fontSize: fontSize * 0.3, // Scale down for thumbnail in pixels
+                                    fontFamily: FONT_FAMILIES[fontFamily],
                                   },
                                 ]}
-                                numberOfLines={
-                                  (activeImageId === image.id ? text : image.text).split("\n")
-                                    .length
-                                }
-                                ellipsizeMode="tail"
+                                numberOfLines={5}
                               >
-                                {activeImageId === image.id ? text : image.text}
+                                {text}
                               </Text>
                             </View>
-                            <Text style={styles.thumbnailDate}>
-                              {new Date(image.createdAt).toLocaleDateString()}
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.deleteButton}
-                            onPress={() => confirmDelete(image)}
-                          >
-                            <Text style={styles.deleteButtonText}>✕</Text>
-                          </TouchableOpacity>
+                            <Text style={styles.thumbnailLabel}>Current Work</Text>
+                          </View>
                         </View>
-                      ))}
+                      )}
+                      {sortedGalleryImages.map((image, index) => {
+                        // Adjust index for grid layout if current work is shown
+                        const adjustedIndex = text.trim() && !activeImageId ? index + 1 : index;
+                        return (
+                          <View
+                            key={image.id}
+                            style={[
+                              styles.thumbnailContainer,
+                              // Remove right margin for every 3rd item (right column)
+                              (adjustedIndex + 1) % 3 === 0 && { marginRight: 0 },
+                            ]}
+                          >
+                            <TouchableOpacity
+                              style={styles.thumbnailTouchable}
+                              onPress={() => restoreImageFromGallery(image)}
+                            >
+                              <View
+                                style={[
+                                  styles.thumbnail,
+                                  {
+                                    backgroundColor:
+                                      activeImageId === image.id
+                                        ? COLORS[backgroundColorIndex]
+                                        : COLOR_VALUES[image.backgroundColor],
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.thumbnailText,
+                                    {
+                                      color:
+                                        activeImageId === image.id
+                                          ? COLORS[textColorIndex]
+                                          : COLOR_VALUES[image.textColor],
+                                      fontSize:
+                                        (activeImageId === image.id ? fontSize : image.fontSize) *
+                                        0.21, // Precisely tuned to match original character density
+                                      textAlign:
+                                        activeImageId === image.id
+                                          ? ALIGNMENTS[alignment]
+                                          : ALIGNMENTS[image.alignment],
+                                      fontFamily:
+                                        activeImageId === image.id
+                                          ? FONT_FAMILIES[fontFamily] === "System"
+                                            ? undefined
+                                            : FONT_FAMILIES[fontFamily]
+                                          : FONT_FAMILIES[image.fontFamily] === "System"
+                                          ? undefined
+                                          : FONT_FAMILIES[image.fontFamily],
+                                    },
+                                  ]}
+                                  numberOfLines={
+                                    (activeImageId === image.id ? text : image.text).split("\n")
+                                      .length
+                                  }
+                                  ellipsizeMode="tail"
+                                >
+                                  {activeImageId === image.id ? text : image.text}
+                                </Text>
+                              </View>
+                              <Text style={styles.thumbnailDate}>
+                                {new Date(image.createdAt).toLocaleDateString()}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.deleteButton}
+                              onPress={() => confirmDelete(image)}
+                            >
+                              <Text style={styles.deleteButtonText}>✕</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
                     </View>
                   )}
                 </ScrollView>
@@ -956,7 +1035,7 @@ function AppContent() {
           <View style={styles.deleteModalContainer}>
             <Text style={styles.deleteModalTitle}>Delete Image</Text>
             <Text style={styles.deleteModalMessage}>
-              Are you sure you want to delete this image? This action cannot be undone.
+              Really delete this image? This action cannot be undone.
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -1032,10 +1111,6 @@ const styles = StyleSheet.create({
   previewContainer: {
     position: "absolute",
     width: "100%",
-
-    // width: "90%", // Match the captured image width
-    // left: "5%", // Center horizontally
-    // paddingHorizontal: "5%",
     paddingTop: "5%",
     paddingBottom: "5%",
     borderRadius: 0,
@@ -1209,6 +1284,11 @@ const styles = StyleSheet.create({
     width: "31%", // Three columns with gaps
     marginBottom: 20, // Bottom margin in pixels
     marginRight: "3.5%", // Right margin for spacing between columns
+  },
+  currentWorkContainer: {
+    borderWidth: 2, // Border thickness in pixels
+    borderColor: GOLDEN_COLOR, // Golden border to highlight current work
+    borderRadius: 8, // Border radius in pixels
   },
   thumbnail: {
     aspectRatio: 9 / 12.8, // 20% shorter height than iPhone screen ratio
