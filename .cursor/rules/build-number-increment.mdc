@@ -1,0 +1,54 @@
+---
+description: "build number increment location and process"
+---
+
+# Build Number Increment Guide
+
+## Location
+
+The iOS build number is incremented in [app.json](mdc:app.json) under the `ios.buildNumber` property:
+
+```json
+"ios": {
+  "supportsTablet": true,
+  "bundleIdentifier": "com.heyhannah.app",
+  "buildNumber": "5",
+  "infoPlist": {
+    // ...
+  }
+}
+```
+
+## Manual Increment Process
+
+To increment the build number for App Store submission:
+
+1. Open [app.json](mdc:app.json)
+2. Locate the `ios.buildNumber` property (currently line 18)
+3. Change the value to the next sequential number (e.g., "5" → "6")
+4. Save the file
+
+## Automatic Increment Option
+
+The project is configured with automatic increment for production builds in [eas.json](mdc:eas.json):
+
+```json
+"production": {
+  "autoIncrement": true
+}
+```
+
+When using `eas build --platform ios --profile production`, the build number will be automatically incremented.
+
+## Current Status
+
+- Current build number: 5
+- App version: 1.0.0
+- Bundle identifier: com.heyhannah.app
+
+## Build Number Requirements
+
+- Must be a string value in app.json
+- Must increment for each App Store submission
+- Should be sequential (no gaps or duplicates)
+- Independent of the app version number
