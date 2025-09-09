@@ -64,7 +64,8 @@ function AppContent() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
   const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
-  const [gallerySortMode, setGallerySortMode] = useState("newest"); // 'newest', 'oldest', 'random'
+  const [gallerySortMode, setGallerySortMode] = useState("newest");
+  const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'random'
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -276,9 +277,62 @@ function AppContent() {
     }
   };
 
+  const createNewImage = async (uri, galleryDir) => {
+    // Create permanent file
+    const timestamp = Date.now();
+    const filename = `text-image-${timestamp}.jpg`;
+    const permanentPath = galleryDir + filename;
+
+    await FileSystem.copyAsync({
+      from: uri,
+      to: permanentPath,
+    });
+
+    // Save metadata
+    const metadata = {
+      id: timestamp,
+      filename,
+      path: permanentPath,
+      text: text.substring(0, 100), // Preview text in characters
+      backgroundColor: COLORS[backgroundColorIndex],
+      backgroundColorIndex,
+      textColor: COLORS[textColorIndex],
+      textColorIndex,
+      alignment,
+      fontFamily,
+      fontSize,
+      previewHeight,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Update gallery list - add new images at the beginning so newest appears first
+    const newGalleryImages = [metadata, ...galleryImages];
+    setGalleryImages(newGalleryImages);
+
+    // Set this image as the currently active one for live thumbnail updates
+    setActiveImageId(metadata.id);
+
+    // Save to FileSystem
+    const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+    await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(newGalleryImages));
+
+    return true;
+  };
+
   const saveToGallery = async () => {
     try {
-      if (!text.trim()) return;
+      if (!text.trim()) return true; // Nothing to save, consider it successful
+
+      // Capture ref should always be available now, but add safety check
+      if (!captureTextRef.current) {
+        if (__DEV__) {
+          console.error("Capture ref unexpectedly not available");
+          console.log("Current view:", currentView);
+          console.log("Text content:", text.substring(0, 50) + "...");
+        }
+        Alert.alert("Error", "Text rendering not ready. Please try again in a moment.");
+        return false;
+      }
 
       const galleryDir = FileSystem.documentDirectory + "gallery/";
       await FileSystem.makeDirectoryAsync(galleryDir, { intermediates: true });
@@ -290,40 +344,75 @@ function AppContent() {
         result: "tmpfile",
       });
 
-      // Create permanent file
-      const timestamp = Date.now();
-      const filename = `text-image-${timestamp}.jpg`;
-      const permanentPath = galleryDir + filename;
+      let newGalleryImages;
+      let imageId;
 
-      // Copy from temp to permanent location
-      await FileSystem.copyAsync({
-        from: uri,
-        to: permanentPath,
-      });
+      if (activeImageId) {
+        // Update existing image
+        const existingImageIndex = galleryImages.findIndex((img) => img.id === activeImageId);
+        if (existingImageIndex !== -1) {
+          const existingImage = galleryImages[existingImageIndex];
 
-      // Save metadata
-      const metadata = {
-        id: timestamp,
-        filename,
-        path: permanentPath,
-        text: text.substring(0, 100), // Preview text in characters
-        backgroundColor: COLORS[backgroundColorIndex],
-        backgroundColorIndex,
-        textColor: COLORS[textColorIndex],
-        textColorIndex,
-        alignment,
-        fontFamily,
-        fontSize,
-        previewHeight,
-        createdAt: new Date().toISOString(),
-      };
+          // Delete old image file
+          try {
+            const fileInfo = await FileSystem.getInfoAsync(existingImage.path);
+            if (fileInfo.exists) {
+              await FileSystem.deleteAsync(existingImage.path);
+            }
+          } catch (deleteError) {
+            if (__DEV__) console.warn("Could not delete old image file:", deleteError);
+          }
 
-      // Update gallery list - add new images at the beginning so newest appears first
-      const newGalleryImages = [metadata, ...galleryImages];
-      setGalleryImages(newGalleryImages);
+          // Create new file with current timestamp
+          const timestamp = Date.now();
+          const filename = `text-image-${timestamp}.jpg`;
+          const permanentPath = galleryDir + filename;
 
-      // Set this image as the currently active one for live thumbnail updates
-      setActiveImageId(metadata.id);
+          await FileSystem.copyAsync({
+            from: uri,
+            to: permanentPath,
+          });
+
+          // Update metadata with new timestamp and current date
+          const updatedMetadata = {
+            ...existingImage,
+            filename,
+            path: permanentPath,
+            text: text.substring(0, 100), // Preview text in characters
+            backgroundColor: COLORS[backgroundColorIndex],
+            backgroundColorIndex,
+            textColor: COLORS[textColorIndex],
+            textColorIndex,
+            alignment,
+            fontFamily,
+            fontSize,
+            previewHeight,
+            createdAt: new Date().toISOString(), // Update to current date
+          };
+
+          // Replace the existing image in the array
+          newGalleryImages = [...galleryImages];
+          newGalleryImages[existingImageIndex] = updatedMetadata;
+          imageId = activeImageId;
+
+          if (__DEV__) {
+            console.log(
+              "Updated image metadata with date:",
+              new Date(updatedMetadata.createdAt).toLocaleDateString()
+            );
+          }
+        } else {
+          // activeImageId doesn't exist in gallery, treat as new image
+          return await createNewImage(uri, galleryDir);
+        }
+      } else {
+        // Create new image
+        return await createNewImage(uri, galleryDir);
+      }
+
+      // Force a fresh array reference to ensure React detects the change
+      setGalleryImages([...newGalleryImages]);
+      setActiveImageId(imageId);
 
       // Save to FileSystem
       const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
@@ -337,14 +426,96 @@ function AppContent() {
   };
 
   const restoreImageFromGallery = (imageData) => {
-    setText(imageData.text);
-    setBackgroundColorIndex(imageData.backgroundColorIndex);
-    setTextColorIndex(imageData.textColorIndex);
-    setAlignment(imageData.alignment);
-    setFontFamily(imageData.fontFamily);
-    setPreviewHeight(imageData.previewHeight);
-    setStartedWriting(true);
-    setActiveImageId(imageData.id); // Track that this image is being edited
+    // First, reset all state to defaults to prevent flash of previous content
+    setText("");
+    setBackgroundColorIndex(5); // default background
+    setTextColorIndex(3); // default text color
+    setAlignment(0); // default alignment
+    setFontFamily(0); // default font
+    setStartedWriting(false);
+    setActiveImageId(null);
+
+    // Switch to create view with clean state
+    setCurrentView("create");
+
+    // Now restore the actual image data after the clean state is rendered
+    setTimeout(() => {
+      setText(imageData.text);
+      setBackgroundColorIndex(imageData.backgroundColorIndex);
+      setTextColorIndex(imageData.textColorIndex);
+      setAlignment(imageData.alignment);
+      setFontFamily(imageData.fontFamily);
+      setPreviewHeight(imageData.previewHeight);
+      setStartedWriting(true);
+      setActiveImageId(imageData.id);
+      setIsTransitioning(false); // Clear transitioning state once fully loaded
+    }, 50); // Small delay to ensure clean state renders first
+  };
+
+  const handleImageSelection = async (imageData) => {
+    // Set transitioning state to hide content during switch
+    setIsTransitioning(true);
+
+    // Check if we need to save current work
+    const needsToSave =
+      text.trim() &&
+      ((activeImageId && activeImageId !== imageData.id) || // editing different image
+        !activeImageId); // new unsaved work
+
+    if (needsToSave) {
+      // Auto-save current work before switching
+      const saved = await saveToGallery();
+
+      if (!saved) {
+        // If save failed, show error and don't switch
+        Alert.alert(
+          "Error",
+          "Failed to save current work before switching images. Please try again."
+        );
+        setIsTransitioning(false);
+        return;
+      }
+    }
+
+    // Now restore the selected image (this will switch to create view with the right content)
+    restoreImageFromGallery(imageData);
+    setIsTransitioning(false);
+  };
+
+  const handleGalleryView = async () => {
+    // Auto-save current work if there's text (both new images and existing edits)
+    if (text.trim()) {
+      const saved = await saveToGallery();
+      if (!saved) {
+        // If save failed, don't switch to gallery
+        Alert.alert("Error", "Failed to save image before switching to gallery.");
+        return;
+      }
+    }
+    setCurrentView("gallery");
+  };
+
+  const handleEditView = () => {
+    // If there's an active image, restore it for editing
+    if (activeImageId) {
+      const activeImage = galleryImages.find((img) => img.id === activeImageId);
+      if (activeImage) {
+        restoreImageFromGallery(activeImage);
+        return; // restoreImageFromGallery already switches to create view
+      }
+    }
+
+    // If no active image, create a new blank image
+    setText("");
+    setBackgroundColorIndex(5); // default yellow background
+    setTextColorIndex(3); // default blue text
+    setAlignment(0); // left alignment
+    setFontFamily(0); // default font
+    setFontSize(baseSize);
+    setPreviewHeight(400); // default height in pixels
+    setStartedWriting(false);
+    setIsPreviewMode(false);
+    setActiveImageId(null);
     setCurrentView("create");
   };
 
@@ -380,6 +551,20 @@ function AppContent() {
       // Update gallery list
       const updatedImages = galleryImages.filter((img) => img.id !== imageId);
       setGalleryImages(updatedImages);
+
+      // If we deleted the currently active image, clear the activeImageId and reset to blank state
+      if (activeImageId === imageId) {
+        setActiveImageId(null);
+        setText("");
+        setBackgroundColorIndex(5); // default yellow background
+        setTextColorIndex(3); // default blue text
+        setAlignment(0); // left alignment
+        setFontFamily(0); // default font
+        setFontSize(baseSize);
+        setPreviewHeight(400); // default height in pixels
+        setStartedWriting(false);
+        setIsPreviewMode(false);
+      }
 
       // Save updated list to FileSystem
       const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
@@ -625,10 +810,66 @@ function AppContent() {
           <View style={styles.flex}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
+            {/* Always-available hidden capture container for saving */}
+            <View
+              style={[
+                styles.textContainer,
+                {
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  opacity: 0,
+                  pointerEvents: "none",
+                  zIndex: -1000,
+                  backgroundColor: currentBackgroundColor,
+                },
+              ]}
+              collapsable={false}
+            >
+              <View
+                ref={captureTextRef}
+                style={[
+                  styles.captureContainer,
+                  {
+                    backgroundColor: currentBackgroundColor,
+                    opacity: 1,
+                    pointerEvents: "none",
+                  },
+                ]}
+                collapsable={false}
+              >
+                <Text
+                  style={[
+                    styles.captureText,
+                    {
+                      color: currentTextColor,
+                      fontSize: fontSize,
+                      textAlign: currentAlignment,
+                      fontFamily: currentFontFamily,
+                    },
+                  ]}
+                >
+                  {text}
+                </Text>
+                <Text
+                  style={[
+                    styles.watermark,
+                    {
+                      color: currentTextColor,
+                    },
+                  ]}
+                >
+                  made with Hey Hannah
+                </Text>
+              </View>
+            </View>
+
             {/* Navigation elements */}
             {!isPreviewMode && currentView === "create" && (
               <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-                <TouchableOpacity onPress={() => setCurrentView("gallery")}>
+                <TouchableOpacity onPress={handleGalleryView}>
                   <Text style={styles.navigationText}>Gallery</Text>
                 </TouchableOpacity>
                 {startedWriting && text.trim() && (
@@ -650,8 +891,8 @@ function AppContent() {
                       : "Random"}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setCurrentView("create")}>
-                  <Text style={styles.navigationText}>Edit</Text>
+                <TouchableOpacity onPress={handleEditView}>
+                  <Text style={styles.navigationText}>{activeImageId ? "Edit" : "New"}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -729,33 +970,79 @@ function AppContent() {
 
             {/* Main content area */}
             {currentView === "create" ? (
-              <TouchableWithoutFeedback onPress={isPreviewMode ? exitPreviewMode : undefined}>
-                <View
-                  ref={textAreaRef}
-                  style={[
-                    styles.textContainer,
-                    {
-                      backgroundColor: isPreviewMode ? "#000000" : currentBackgroundColor,
-                    },
-                  ]}
-                  collapsable={false}
-                >
-                  {/* Hidden text for capture - always rendered but invisible when not capturing */}
+              isTransitioning ? (
+                <View style={[styles.textContainer, { backgroundColor: "#000000" }]}>
+                  {/* Blank state during transition to prevent flash */}
+                </View>
+              ) : (
+                <TouchableWithoutFeedback onPress={isPreviewMode ? exitPreviewMode : undefined}>
                   <View
-                    ref={captureTextRef}
+                    ref={textAreaRef}
                     style={[
-                      styles.captureContainer,
+                      styles.textContainer,
                       {
-                        backgroundColor: currentBackgroundColor,
-                        opacity: isCapturing && text.length > 0 ? 1 : 0,
-                        pointerEvents: "none",
+                        backgroundColor: isPreviewMode ? "#000000" : currentBackgroundColor,
                       },
                     ]}
                     collapsable={false}
                   >
-                    <Text
+                    {/* Hidden text for capture - always rendered but invisible when not capturing */}
+                    <View
                       style={[
-                        styles.captureText,
+                        styles.captureContainer,
+                        {
+                          backgroundColor: currentBackgroundColor,
+                          opacity: isCapturing && text.length > 0 ? 1 : 0,
+                          pointerEvents: "none",
+                        },
+                      ]}
+                      collapsable={false}
+                    >
+                      <Text
+                        style={[
+                          styles.captureText,
+                          {
+                            color: currentTextColor,
+                            fontSize: fontSize,
+                            textAlign: currentAlignment,
+                            fontFamily: currentFontFamily,
+                          },
+                        ]}
+                      >
+                        {text}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.watermark,
+                          {
+                            color: currentTextColor,
+                          },
+                        ]}
+                      >
+                        made with Hey Hannah
+                      </Text>
+                    </View>
+
+                    {!startedWriting ? (
+                      <Text
+                        style={[
+                          styles.placeholderText,
+                          {
+                            color: currentTextColor,
+                            fontSize: fontSize,
+                            textAlign: currentAlignment,
+                            fontFamily: currentFontFamily,
+                            opacity: 0.6, // 60% opacity
+                          },
+                        ]}
+                      ></Text>
+                    ) : null}
+
+                    {/* Invisible text for measurement - always rendered */}
+                    <Text
+                      ref={measureTextRef}
+                      style={[
+                        styles.measureText,
                         {
                           color: currentTextColor,
                           fontSize: fontSize,
@@ -766,73 +1053,32 @@ function AppContent() {
                     >
                       {text}
                     </Text>
-                    <Text
-                      style={[
-                        styles.watermark,
-                        {
-                          color: currentTextColor,
-                        },
-                      ]}
-                    >
-                      made with Hey Hannah
-                    </Text>
+
+                    {/* TextInput for user interaction - hidden during capture and preview */}
+                    {!isPreviewMode && (
+                      <TextInput
+                        ref={textInputRef}
+                        style={[
+                          styles.textInput,
+                          {
+                            color: isCapturing ? "transparent" : currentTextColor,
+                            fontSize: fontSize,
+                            textAlign: currentAlignment,
+                            fontFamily: currentFontFamily,
+                          },
+                        ]}
+                        value={text}
+                        onChangeText={handleTextChange}
+                        placeholder="Say something..."
+                        multiline
+                        scrollEnabled={true}
+                        showsVerticalScrollIndicator={false}
+                        textAlignVertical="top"
+                      />
+                    )}
                   </View>
-
-                  {!startedWriting ? (
-                    <Text
-                      style={[
-                        styles.placeholderText,
-                        {
-                          color: currentTextColor,
-                          fontSize: fontSize,
-                          textAlign: currentAlignment,
-                          fontFamily: currentFontFamily,
-                          opacity: 0.6, // 60% opacity
-                        },
-                      ]}
-                    ></Text>
-                  ) : null}
-
-                  {/* Invisible text for measurement - always rendered */}
-                  <Text
-                    ref={measureTextRef}
-                    style={[
-                      styles.measureText,
-                      {
-                        color: currentTextColor,
-                        fontSize: fontSize,
-                        textAlign: currentAlignment,
-                        fontFamily: currentFontFamily,
-                      },
-                    ]}
-                  >
-                    {text}
-                  </Text>
-
-                  {/* TextInput for user interaction - hidden during capture and preview */}
-                  {!isPreviewMode && (
-                    <TextInput
-                      ref={textInputRef}
-                      style={[
-                        styles.textInput,
-                        {
-                          color: isCapturing ? "transparent" : currentTextColor,
-                          fontSize: fontSize,
-                          textAlign: currentAlignment,
-                          fontFamily: currentFontFamily,
-                        },
-                      ]}
-                      value={text}
-                      onChangeText={handleTextChange}
-                      placeholder="Say something..."
-                      multiline
-                      scrollEnabled={true}
-                      showsVerticalScrollIndicator={false}
-                      textAlignVertical="top"
-                    />
-                  )}
-                </View>
-              </TouchableWithoutFeedback>
+                </TouchableWithoutFeedback>
+              )
             ) : (
               /* Gallery view */
               <View style={styles.galleryContainer}>
@@ -849,55 +1095,19 @@ function AppContent() {
                     </View>
                   ) : (
                     <View style={styles.thumbnailGrid}>
-                      {/* Show current work-in-progress image first if text exists and no active image */}
-                      {text.trim() && !activeImageId && (
-                        <View style={[styles.thumbnailContainer, styles.currentWorkContainer]}>
-                          <View style={styles.thumbnailTouchable}>
-                            <View
-                              style={[
-                                styles.thumbnailPreview,
-                                { backgroundColor: COLORS[backgroundColorIndex] },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.thumbnailText,
-                                  {
-                                    color: COLORS[textColorIndex],
-                                    textAlign:
-                                      alignment === 0
-                                        ? "left"
-                                        : alignment === 1
-                                        ? "center"
-                                        : "right",
-                                    fontSize: fontSize * 0.3, // Scale down for thumbnail in pixels
-                                    fontFamily: FONT_FAMILIES[fontFamily],
-                                  },
-                                ]}
-                                numberOfLines={5}
-                              >
-                                {text}
-                              </Text>
-                            </View>
-                            <Text style={styles.thumbnailLabel}>Current Work</Text>
-                          </View>
-                        </View>
-                      )}
                       {sortedGalleryImages.map((image, index) => {
-                        // Adjust index for grid layout if current work is shown
-                        const adjustedIndex = text.trim() && !activeImageId ? index + 1 : index;
                         return (
                           <View
                             key={image.id}
                             style={[
                               styles.thumbnailContainer,
                               // Remove right margin for every 3rd item (right column)
-                              (adjustedIndex + 1) % 3 === 0 && { marginRight: 0 },
+                              (index + 1) % 3 === 0 && { marginRight: 0 },
                             ]}
                           >
                             <TouchableOpacity
                               style={styles.thumbnailTouchable}
-                              onPress={() => restoreImageFromGallery(image)}
+                              onPress={() => handleImageSelection(image)}
                             >
                               <View
                                 style={[
@@ -1034,9 +1244,7 @@ function AppContent() {
         <View style={styles.deleteModalOverlay}>
           <View style={styles.deleteModalContainer}>
             <Text style={styles.deleteModalTitle}>Delete Image</Text>
-            <Text style={styles.deleteModalMessage}>
-              Really delete this image? This action cannot be undone.
-            </Text>
+            <Text style={styles.deleteModalMessage}>This action cannot be undone.</Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
                 style={[styles.deleteModalButton, styles.cancelButton]}
