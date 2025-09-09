@@ -1,0 +1,110 @@
+---
+description: "version and build number increment location and process"
+---
+
+# Version and Build Number Increment Guide
+
+## Location
+
+### App Version
+
+The app version is managed in [app.json](mdc:app.json) under the `version` property:
+
+```json
+{
+  "expo": {
+    "version": "1.1.0"
+  }
+}
+```
+
+### Build Number
+
+The iOS build number is incremented in [app.json](mdc:app.json) under the `ios.buildNumber` property:
+
+```json
+"ios": {
+  "supportsTablet": true,
+  "bundleIdentifier": "com.heyhannah.app",
+  "buildNumber": "5",
+  "infoPlist": {
+    // ...
+  }
+}
+```
+
+## Manual Increment Process
+
+### Version Number Updates
+
+App versions follow semantic versioning (MAJOR.MINOR.PATCH):
+
+1. **Patch Release** (1.1.0 → 1.1.1): Bug fixes and minor updates
+2. **Minor Release** (1.1.0 → 1.2.0): New features, backward compatible
+3. **Major Release** (1.1.0 → 2.0.0): Breaking changes or significant updates
+
+To update the app version:
+
+1. Open [app.json](mdc:app.json)
+2. Locate the `version` property (currently line 5)
+3. Update to the appropriate semantic version
+4. Save the file
+
+### Build Number Updates
+
+To increment the build number for App Store submission:
+
+1. Open [app.json](mdc:app.json)
+2. Locate the `ios.buildNumber` property (currently line 18)
+3. Change the value to the next sequential number (e.g., "5" → "6")
+4. Save the file
+
+### Combined Update Process
+
+For new releases, typically update both:
+
+1. Update app version for the release type
+2. Reset or increment build number as needed
+3. Commit changes before building
+
+## Automatic Increment Option
+
+The project is configured with automatic increment for production builds in [eas.json](mdc:eas.json):
+
+```json
+"production": {
+  "autoIncrement": true
+}
+```
+
+When using `eas build --platform ios --profile production`, the build number will be automatically incremented.
+
+## Current Status
+
+- Current app version: 1.1.0
+- Current build number: 5
+- Bundle identifier: com.heyhannah.app
+
+## Version and Build Number Requirements
+
+### App Version Requirements
+
+- Must follow semantic versioning format (MAJOR.MINOR.PATCH)
+- Should increment appropriately based on change type
+- Used for user-facing version identification
+- Displayed in App Store and app settings
+
+### Build Number Requirements
+
+- Must be a string value in app.json
+- Must increment for each App Store submission
+- Should be sequential (no gaps or duplicates)
+- Independent of the app version number
+- Used internally by App Store for build identification
+
+## Release Workflow
+
+1. **Development**: Work with current version and build number
+2. **Pre-release**: Update app version based on changes made
+3. **Build**: Increment build number for App Store submission
+4. **Post-release**: Tag release in git with version number
