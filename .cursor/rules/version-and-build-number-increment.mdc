@@ -33,6 +33,20 @@ The iOS build number is incremented in [app.json](mdc:app.json) under the `ios.b
 }
 ```
 
+### iOS Info.plist
+
+**CRITICAL**: For successful App Store uploads, version information must also be updated in [ios/HeyHannah/Info.plist](mdc:ios/HeyHannah/Info.plist):
+
+```xml
+<key>CFBundleShortVersionString</key>
+<string>1.1.0</string>
+<key>CFBundleVersion</key>
+<string>5</string>
+```
+
+- `CFBundleShortVersionString` must match the app version in app.json
+- `CFBundleVersion` must match the build number in app.json
+
 ## Manual Increment Process
 
 ### Version Number Updates
@@ -48,7 +62,10 @@ To update the app version:
 1. Open [app.json](mdc:app.json)
 2. Locate the `version` property (currently line 5)
 3. Update to the appropriate semantic version
-4. Save the file
+4. Open [ios/HeyHannah/Info.plist](mdc:ios/HeyHannah/Info.plist)
+5. Locate `CFBundleShortVersionString` (currently line 22)
+6. Update to match the version in app.json
+7. Save both files
 
 ### Build Number Updates
 
@@ -57,15 +74,20 @@ To increment the build number for App Store submission:
 1. Open [app.json](mdc:app.json)
 2. Locate the `ios.buildNumber` property (currently line 18)
 3. Change the value to the next sequential number (e.g., "5" → "6")
-4. Save the file
+4. Open [ios/HeyHannah/Info.plist](mdc:ios/HeyHannah/Info.plist)
+5. Locate `CFBundleVersion` (currently line 41)
+6. Update to match the build number in app.json
+7. Save both files
 
 ### Combined Update Process
 
 For new releases, typically update both:
 
-1. Update app version for the release type
-2. Reset or increment build number as needed
-3. Commit changes before building
+1. Update app version for the release type in app.json
+2. Update corresponding version in Info.plist
+3. Reset or increment build number as needed in app.json
+4. Update corresponding build number in Info.plist
+5. Commit changes before building
 
 ## Automatic Increment Option
 
@@ -78,6 +100,8 @@ The project is configured with automatic increment for production builds in [eas
 ```
 
 When using `eas build --platform ios --profile production`, the build number will be automatically incremented.
+
+**NOTE**: Automatic increment only updates app.json. You must manually ensure Info.plist values match for successful App Store upload.
 
 ## Current Status
 
