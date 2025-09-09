@@ -1,0 +1,27 @@
+# App Store Process Documentation
+
+## How to Build and Upload to the App Store
+
+### Step 1: Increment Version and Build Numbers
+Before building for App Store submission, ensure version and build numbers are properly updated:
+- Update app version in `app.json` if this is a new release (e.g., 1.1.0 → 1.2.0)
+- Increment build number in `app.json` (e.g., "5" → "6")
+- Build numbers must always increase and never reset
+- Each App Store submission requires a unique, higher build number
+
+### Step 2: Select Build Target
+In Xcode:
+- Select "Generic iOS Device" as the build target from the device/simulator dropdown
+
+### Step 3: Archive the Build
+In Xcode:
+- Go to "Product" menu
+- Select "Archive"
+- Wait for the archive process to complete
+
+### Step 4: Distribute to App Store
+After archiving:
+- Select the archive from the organizer window
+- Click "Distribute App"
+- Choose "App Store Connect" as the distribution method
+- Follow the prompts to upload to App Store Connect
