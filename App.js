@@ -293,7 +293,7 @@ function AppContent() {
       id: timestamp,
       filename,
       path: permanentPath,
-      text: text.substring(0, 100), // Preview text in characters
+      text: text, // Full text content
       backgroundColor: COLORS[backgroundColorIndex],
       backgroundColorIndex,
       textColor: COLORS[textColorIndex],
@@ -378,7 +378,7 @@ function AppContent() {
             ...existingImage,
             filename,
             path: permanentPath,
-            text: text.substring(0, 100), // Preview text in characters
+            text: text, // Full text content
             backgroundColor: COLORS[backgroundColorIndex],
             backgroundColorIndex,
             textColor: COLORS[textColorIndex],
@@ -1145,10 +1145,7 @@ function AppContent() {
                                           : FONT_FAMILIES[image.fontFamily],
                                     },
                                   ]}
-                                  numberOfLines={
-                                    (activeImageId === image.id ? text : image.text).split("\n")
-                                      .length
-                                  }
+                                  numberOfLines={15}
                                   ellipsizeMode="tail"
                                 >
                                   {activeImageId === image.id ? text : image.text}
