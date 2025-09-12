@@ -69,6 +69,7 @@ function AppContent() {
   const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
   const [gallerySortMode, setGallerySortMode] = useState("newest");
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'random'
+  const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -166,6 +167,8 @@ function AppContent() {
     try {
       if (!isPreviewMode) {
         Keyboard.dismiss();
+        // Set return view to current view when entering preview
+        setPreviewReturnView(currentView);
         // Calculate preview height to match export before showing preview
         if (text.length > 0) {
           try {
@@ -195,6 +198,8 @@ function AppContent() {
   const exitPreviewMode = () => {
     if (isPreviewMode) {
       setIsPreviewMode(false);
+      // Return to the view where preview was initiated
+      setCurrentView(previewReturnView);
     }
   };
 
@@ -745,6 +750,64 @@ function AppContent() {
     setImageToShare(null);
   };
 
+  const previewImageFromGallery = async (image) => {
+    try {
+      // Set transitioning state to hide content during switch
+      setIsTransitioning(true);
+
+      // Set return view to gallery since preview was initiated from gallery
+      setPreviewReturnView("gallery");
+
+      // First, restore the image to the editor (same as handleImageSelection but without auto-save)
+      // Reset all state to defaults first
+      setText("");
+      setBackgroundColorIndex(5); // default background
+      setTextColorIndex(3); // default text color
+      setAlignment(0); // default alignment
+      setFontFamily(0); // default font
+      setStartedWriting(false);
+      setActiveImageId(null);
+
+      // Restore the image data immediately
+      setText(image.text);
+      setBackgroundColorIndex(image.backgroundColorIndex);
+      setTextColorIndex(image.textColorIndex);
+      setAlignment(image.alignment);
+      setFontFamily(image.fontFamily);
+      setPreviewHeight(image.previewHeight);
+      setStartedWriting(true);
+      setActiveImageId(image.id);
+
+      // Switch to create view and activate preview mode simultaneously
+      setCurrentView("create");
+      setIsPreviewMode(true);
+      setIsTransitioning(false);
+
+      // Calculate proper preview height after state is set
+      setTimeout(async () => {
+        try {
+          if (image.text.length > 0) {
+            // Wait a moment for text to render
+            await new Promise((resolve) => setTimeout(resolve, 200)); // Delay in milliseconds
+            const measuredHeight = await measureTextHeight();
+            const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+            const watermarkHeight = 40; // Space for watermark and margin in pixels
+            const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+
+            setPreviewHeight(calculatedHeight);
+          }
+        } catch (error) {
+          if (__DEV__) console.error("Preview height calculation error:", error);
+          // Continue with existing preview height
+        }
+      }, 100); // Small delay for height calculation
+    } catch (error) {
+      if (__DEV__) console.error("Failed to preview image:", error);
+      setIsTransitioning(false);
+      Alert.alert("Error", "Failed to preview image.");
+    }
+  };
+
   const showImageActionSheet = (image) => {
     // Dismiss keyboard before showing action sheet to prevent UI warnings
     Keyboard.dismiss();
@@ -753,25 +816,28 @@ function AppContent() {
 
     ActionSheetIOS.showActionSheetWithOptions(
       {
-        options: [favoriteOption, "Duplicate", "Copy", "Share", "Delete", "Cancel"],
-        destructiveButtonIndex: 4, // Delete option
-        cancelButtonIndex: 5,
+        options: ["Preview", favoriteOption, "Copy", "Duplicate", "Share", "Delete", "Cancel"],
+        destructiveButtonIndex: 5, // Delete option
+        cancelButtonIndex: 6,
       },
       (buttonIndex) => {
         switch (buttonIndex) {
-          case 0: // Favorite/Unfavorite
-            toggleFavoriteImage(image.id);
+          case 0: // Preview
+            previewImageFromGallery(image);
             break;
-          case 1: // Duplicate
-            duplicateImageInGallery(image.id);
+          case 1: // Favorite/Unfavorite
+            toggleFavoriteImage(image.id);
             break;
           case 2: // Copy
             copyImageFromGallery(image.id);
             break;
-          case 3: // Share
+          case 3: // Duplicate
+            duplicateImageInGallery(image.id);
+            break;
+          case 4: // Share
             showShareModal(image);
             break;
-          case 4: // Delete
+          case 5: // Delete
             confirmDelete(image);
             break;
           default:
