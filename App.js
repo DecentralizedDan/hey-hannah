@@ -13,6 +13,7 @@ import {
   Platform,
   Alert,
   ScrollView,
+  ActionSheetIOS,
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
@@ -62,7 +63,9 @@ function AppContent() {
   const [currentView, setCurrentView] = useState("create"); // 'create' or 'gallery'
   const [galleryImages, setGalleryImages] = useState([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
+  const [imageToShare, setImageToShare] = useState(null);
   const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
   const [gallerySortMode, setGallerySortMode] = useState("newest");
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'random'
@@ -302,6 +305,7 @@ function AppContent() {
       fontFamily,
       fontSize,
       previewHeight,
+      isFavorited: false,
       createdAt: new Date().toISOString(),
     };
 
@@ -387,6 +391,7 @@ function AppContent() {
             fontFamily,
             fontSize,
             previewHeight,
+            isFavorited: existingImage.isFavorited || false, // Preserve favorite status
             createdAt: new Date().toISOString(), // Update to current date
           };
 
@@ -587,6 +592,170 @@ function AppContent() {
   const cancelDelete = () => {
     setDeleteModalVisible(false);
     setImageToDelete(null);
+  };
+
+  const duplicateImageInGallery = async (imageId) => {
+    try {
+      // Find the image to duplicate
+      const imageToDuplicate = galleryImages.find((img) => img.id === imageId);
+      if (!imageToDuplicate) return;
+
+      // Create new metadata with current timestamp and date
+      const timestamp = Date.now();
+      const filename = `text-image-${timestamp}.jpg`;
+      const galleryDir = FileSystem.documentDirectory + "gallery/";
+      const permanentPath = galleryDir + filename;
+
+      // Copy the image file
+      const fileInfo = await FileSystem.getInfoAsync(imageToDuplicate.path);
+      if (fileInfo.exists) {
+        await FileSystem.copyAsync({
+          from: imageToDuplicate.path,
+          to: permanentPath,
+        });
+      } else {
+        throw new Error("Original image file not found");
+      }
+
+      // Create new metadata with all the same properties but new timestamp and current date
+      const duplicatedMetadata = {
+        ...imageToDuplicate,
+        id: timestamp,
+        filename,
+        path: permanentPath,
+        isFavorited: false, // New duplicates start unfavorited
+        createdAt: new Date().toISOString(), // Set to current date and time
+      };
+
+      // Add to gallery list at the beginning (newest first)
+      const newGalleryImages = [duplicatedMetadata, ...galleryImages];
+      setGalleryImages(newGalleryImages);
+
+      // Save updated list to FileSystem
+      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(newGalleryImages));
+
+      Alert.alert("Success", "Image duplicated successfully!");
+    } catch (error) {
+      if (__DEV__) console.error("Failed to duplicate image:", error);
+      Alert.alert("Error", "Failed to duplicate image.");
+    }
+  };
+
+  const toggleFavoriteImage = async (imageId) => {
+    try {
+      // Find and update the image
+      const updatedImages = galleryImages.map((img) => {
+        if (img.id === imageId) {
+          return { ...img, isFavorited: !img.isFavorited };
+        }
+        return img;
+      });
+
+      setGalleryImages(updatedImages);
+
+      // Save updated list to FileSystem
+      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
+      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(updatedImages));
+    } catch (error) {
+      if (__DEV__) console.error("Failed to toggle favorite:", error);
+      Alert.alert("Error", "Failed to update favorite status.");
+    }
+  };
+
+  const copyImageFromGallery = async (imageId) => {
+    try {
+      const image = galleryImages.find((img) => img.id === imageId);
+      if (!image) return;
+
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(image.path);
+      if (!fileInfo.exists) {
+        Alert.alert("Error", "Image file not found.");
+        return;
+      }
+
+      // Use the same approach as the working copyImageToClipboard function
+      // Guard against extremely large images (≈5 MB is practical ceiling for UIPasteboard)
+      const maxBytes = 5 * 1024 * 1024; // 5 MB in bytes
+
+      if (fileInfo?.size && fileInfo.size > maxBytes) {
+        if (__DEV__)
+          console.warn(
+            `Image size ${fileInfo.size} B exceeds pasteboard limit, falling back to text.`
+          );
+        await Clipboard.setStringAsync(image.text);
+        Alert.alert("Text Copied", "Image too large; copied text instead.");
+        return;
+      }
+
+      try {
+        // Convert image file to base64 for clipboard (same as working function)
+        const base64Image = await FileSystem.readAsStringAsync(image.path, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Use the working approach from copyImageToClipboard - no data URI prefix needed
+        await Clipboard.setImageAsync(base64Image);
+        Alert.alert("Success", "Image copied to clipboard!");
+      } catch (imageError) {
+        if (__DEV__) console.log("Image copy failed, copying text instead:", imageError);
+
+        // Fallback: copy just the text content
+        await Clipboard.setStringAsync(image.text);
+        Alert.alert(
+          "Text Copied",
+          `Image copy failed: ${imageError.message || imageError.toString()}. Text copied instead.`
+        );
+      }
+    } catch (error) {
+      if (__DEV__) console.error("Error copying:", error);
+      Alert.alert("Error", "Failed to copy to clipboard.");
+    }
+  };
+
+  const showShareModal = (image) => {
+    setImageToShare(image);
+    setShareModalVisible(true);
+  };
+
+  const closeShareModal = () => {
+    setShareModalVisible(false);
+    setImageToShare(null);
+  };
+
+  const showImageActionSheet = (image) => {
+    const favoriteOption = image.isFavorited ? "Unfavorite" : "Favorite";
+
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        options: [favoriteOption, "Duplicate", "Copy", "Share", "Delete", "Cancel"],
+        destructiveButtonIndex: 4, // Delete option
+        cancelButtonIndex: 5,
+      },
+      (buttonIndex) => {
+        switch (buttonIndex) {
+          case 0: // Favorite/Unfavorite
+            toggleFavoriteImage(image.id);
+            break;
+          case 1: // Duplicate
+            duplicateImageInGallery(image.id);
+            break;
+          case 2: // Copy
+            copyImageFromGallery(image.id);
+            break;
+          case 3: // Share
+            showShareModal(image);
+            break;
+          case 4: // Delete
+            confirmDelete(image);
+            break;
+          default:
+            // Cancel - do nothing
+            break;
+        }
+      }
+    );
   };
 
   // Load gallery on component mount
@@ -1108,6 +1277,7 @@ function AppContent() {
                             <TouchableOpacity
                               style={styles.thumbnailTouchable}
                               onPress={() => handleImageSelection(image)}
+                              onLongPress={() => showImageActionSheet(image)}
                             >
                               <View
                                 style={[
@@ -1155,12 +1325,12 @@ function AppContent() {
                                 {new Date(image.createdAt).toLocaleDateString()}
                               </Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                              style={styles.deleteButton}
-                              onPress={() => confirmDelete(image)}
-                            >
-                              <Text style={styles.deleteButtonText}>✕</Text>
-                            </TouchableOpacity>
+                            {/* Heart icon for favorited images */}
+                            {image.isFavorited && (
+                              <View style={styles.heartIcon}>
+                                <Text style={styles.heartIconText}>❤️</Text>
+                              </View>
+                            )}
                           </View>
                         );
                       })}
@@ -1254,6 +1424,76 @@ function AppContent() {
                 onPress={() => deleteImageFromGallery(imageToDelete?.id)}
               >
                 <Text style={styles.confirmButtonText}>Yes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Share modal */}
+      {shareModalVisible && imageToShare && (
+        <View style={styles.shareModalOverlay}>
+          <View style={styles.shareModalContainer}>
+            <Text style={styles.shareModalTitle}>Share Image</Text>
+            <Text style={styles.shareModalMessage}>Choose how to share your image:</Text>
+            <View style={styles.shareModalButtons}>
+              <TouchableOpacity
+                style={[styles.shareModalButton, styles.shareOptionButton]}
+                onPress={async () => {
+                  closeShareModal();
+                  // Save to Photos
+                  try {
+                    const { status } = await MediaLibrary.requestPermissionsAsync();
+                    if (status !== "granted") {
+                      Alert.alert(
+                        "Permission Required",
+                        "Please grant photo library permissions to save images."
+                      );
+                      return;
+                    }
+                    await MediaLibrary.saveToLibraryAsync(imageToShare.path);
+                    Alert.alert("Success", "Image saved to Photos!");
+                  } catch (error) {
+                    Alert.alert("Error", "Failed to save image to Photos.");
+                  }
+                }}
+              >
+                <Text style={styles.shareOptionText}>Save to Photos</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.shareModalButton, styles.shareOptionButton]}
+                onPress={() => {
+                  closeShareModal();
+                  copyImageFromGallery(imageToShare.id);
+                }}
+              >
+                <Text style={styles.shareOptionText}>Copy to Clipboard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.shareModalButton, styles.shareOptionButton]}
+                onPress={async () => {
+                  closeShareModal();
+                  try {
+                    if (await Sharing.isAvailableAsync()) {
+                      await Sharing.shareAsync(imageToShare.path, {
+                        mimeType: "image/jpeg",
+                        dialogTitle: "Share your text image",
+                      });
+                    } else {
+                      Alert.alert("Error", "Sharing is not available on this device.");
+                    }
+                  } catch (error) {
+                    Alert.alert("Error", "Failed to share image.");
+                  }
+                }}
+              >
+                <Text style={styles.shareOptionText}>Share via Apps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.shareModalButton, styles.cancelButton]}
+                onPress={closeShareModal}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1590,6 +1830,68 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   confirmButtonText: {
+    color: "#FFFFFF", // White text
+    fontSize: 16, // Font size in pixels
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  heartIcon: {
+    position: "absolute",
+    top: 5, // Top offset in pixels
+    left: 5, // Left offset in pixels
+    backgroundColor: "rgba(255, 255, 255, 0.9)", // Semi-transparent white background
+    borderRadius: 12, // Corner radius in pixels
+    padding: 4, // Icon padding in pixels
+    zIndex: 5, // Above thumbnail content
+  },
+  heartIconText: {
+    fontSize: 16, // Heart emoji size in pixels
+  },
+  shareModalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)", // Semi-transparent black overlay
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1002, // Above delete modal
+  },
+  shareModalContainer: {
+    backgroundColor: "#FFFFFF", // White background
+    borderRadius: 12, // Corner radius in pixels
+    padding: 20, // Container padding in pixels
+    margin: 20, // Container margin in pixels
+    maxWidth: 300, // Maximum width in pixels
+    width: "80%",
+  },
+  shareModalTitle: {
+    fontSize: 18, // Title text size in pixels
+    fontWeight: "bold",
+    color: "#000000", // Black text
+    textAlign: "center",
+    marginBottom: 10, // Bottom margin in pixels
+  },
+  shareModalMessage: {
+    fontSize: 16, // Message text size in pixels
+    color: "#333333", // Dark gray text
+    textAlign: "center",
+    marginBottom: 20, // Bottom margin in pixels
+    lineHeight: 22, // Line height in pixels
+  },
+  shareModalButtons: {
+    flexDirection: "column",
+  },
+  shareModalButton: {
+    padding: 12, // Button padding in pixels
+    borderRadius: 8, // Corner radius in pixels
+    marginVertical: 5, // Vertical margin in pixels
+  },
+  shareOptionButton: {
+    backgroundColor: "#007AFF", // iOS blue background
+  },
+  shareOptionText: {
     color: "#FFFFFF", // White text
     fontSize: 16, // Font size in pixels
     fontWeight: "600",
