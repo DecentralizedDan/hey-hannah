@@ -1,0 +1,123 @@
+TEXT FORMATTING FEATURE - DESIGN DECISIONS
+==============================================
+
+FEATURE OVERVIEW
+----------------
+Allow users to apply formatting (bold, italic, underline, strikethrough) to selected text characters within their text images.
+
+USER FLOW
+---------
+1. User highlights/selects one or more characters in their text
+2. Text formatting toolbar appears above the selection (iOS style)
+3. User can select one or more formatting options from the toolbar
+4. Selected formatting options are highlighted in the toolbar to show current state
+5. User can toggle options on/off by tapping them again
+6. "Normal" button removes all formatting from selected text
+7. User dismisses toolbar by clicking away from it
+8. Selected text remains highlighted after toolbar closes for easy re-formatting
+
+DESIGN DECISIONS
+================
+
+1. TEXT STORAGE APPROACH
+   - Use arrays of text segments with styling metadata
+   - Structure: 
+     ```
+     textSegments: [
+       { 
+         text: "Hello ", 
+         styles: {
+           bold: false,
+           italic: false, 
+           underline: false,
+           strikethrough: false
+         }
+       },
+       { 
+         text: "world", 
+         styles: {
+           bold: true,
+           italic: true,
+           underline: false,
+           strikethrough: false
+         }
+       }
+     ]
+     ```
+
+2. FORMATTING SUPPORT
+   - Multiple styles can be applied simultaneously (bold + italic + underline + strikethrough)
+   - No existing formatting system to conflict with
+   - Toggle-based interface for adding/removing individual styles
+   - "Normal" option removes all formatting
+
+3. TEXT SELECTION IMPLEMENTATION
+   - Replace TextInput with custom selectable Text component for selection mode
+   - Dual-mode system:
+     * Editing mode: TextInput for text entry (current behavior)
+     * Selection mode: Custom Text component with touch-based selection for formatting
+   - Switch between modes on tap/focus
+
+4. FORMATTING TOOLBAR
+   - iOS-style popup positioned above the selected text
+   - Shows current formatting state with highlighted/unhighlighted options
+   - Icons for: Bold, Italic, Underline, Strikethrough, Normal
+   - Dismisses when user clicks away from toolbar
+
+5. VISUAL FEEDBACK
+   - Live preview: Formatted text visible while typing/editing
+   - Selection highlight persists after toolbar closes
+   - Formatting visible in gallery thumbnails (moderate difficulty implementation)
+
+6. INTEGRATION WITH EXISTING SYSTEMS
+   - Formatted text still uses dynamic font sizing based on text length
+   - Font size applies to entire text, individual segments inherit this size
+   - Backward compatibility maintained with existing plain text images
+
+7. RENDERING APPROACH
+   - Use nested React Native Text components for formatting
+   - Each text segment renders as separate Text component with appropriate styles
+   - Same approach for main editor and gallery thumbnails (scaled down)
+
+TECHNICAL IMPLEMENTATION PLAN
+=============================
+
+Implementation Order:
+1. Text segment data structure and storage
+2. Text rendering with formatting (nested Text components)
+3. Selection system with touch coordinate-based selection
+4. Formatting toolbar UI and logic
+5. Gallery thumbnail formatting support
+
+Data Migration:
+- Existing images remain as plain text
+- New metadata field: textSegments (optional)
+- If textSegments exists, use it; otherwise convert plain text to single segment
+- Maintain backward compatibility
+
+Performance Considerations:
+- Limit number of text segments if needed for performance
+- Efficient re-rendering when formatting changes
+- Proper text measurement for dynamic font sizing
+
+Gallery Integration:
+- Thumbnails render using same nested Text approach
+- Scaling logic applied to individual segments
+- Formatting preserved in thumbnail previews
+
+FUTURE CONSIDERATIONS
+====================
+- Potential for additional formatting options (color, font family per segment)
+- Export handling for formatted text in images
+- Sharing formatted text vs plain text content
+- Performance optimization for very long formatted text
+
+NOTES
+=====
+- This feature will require significant refactoring of text handling
+- Consider phased implementation to minimize disruption
+- Test thoroughly with existing gallery images
+- Ensure accessibility compliance for formatted text
+
+Last Updated: [Current Date]
+Status: Design Phase - Ready for Implementation

@@ -377,7 +377,16 @@ function AppContent() {
             to: permanentPath,
           });
 
-          // Update metadata with new timestamp and current date
+          // Check if content has actually changed
+          const contentChanged =
+            existingImage.text !== text ||
+            existingImage.backgroundColorIndex !== backgroundColorIndex ||
+            existingImage.textColorIndex !== textColorIndex ||
+            existingImage.alignment !== alignment ||
+            existingImage.fontFamily !== fontFamily ||
+            existingImage.fontSize !== fontSize;
+
+          // Update metadata with new timestamp and current date only if content changed
           const updatedMetadata = {
             ...existingImage,
             filename,
@@ -392,7 +401,7 @@ function AppContent() {
             fontSize,
             previewHeight,
             isFavorited: existingImage.isFavorited || false, // Preserve favorite status
-            createdAt: new Date().toISOString(), // Update to current date
+            createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
           };
 
           // Replace the existing image in the array
@@ -458,8 +467,14 @@ function AppContent() {
   };
 
   const handleImageSelection = async (imageData) => {
+    // Dismiss keyboard first to prevent keyboard queue issues
+    Keyboard.dismiss();
+
     // Set transitioning state to hide content during switch
     setIsTransitioning(true);
+
+    // Wait for keyboard to dismiss before proceeding
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Short delay in milliseconds
 
     // Check if we need to save current work
     const needsToSave =
@@ -488,6 +503,9 @@ function AppContent() {
   };
 
   const handleGalleryView = async () => {
+    // Dismiss keyboard before switching views
+    Keyboard.dismiss();
+
     // Auto-save current work if there's text (both new images and existing edits)
     if (text.trim()) {
       const saved = await saveToGallery();
@@ -501,6 +519,9 @@ function AppContent() {
   };
 
   const handleEditView = () => {
+    // Dismiss keyboard before switching views
+    Keyboard.dismiss();
+
     // If there's an active image, restore it for editing
     if (activeImageId) {
       const activeImage = galleryImages.find((img) => img.id === activeImageId);
@@ -725,6 +746,9 @@ function AppContent() {
   };
 
   const showImageActionSheet = (image) => {
+    // Dismiss keyboard before showing action sheet to prevent UI warnings
+    Keyboard.dismiss();
+
     const favoriteOption = image.isFavorited ? "Unfavorite" : "Favorite";
 
     ActionSheetIOS.showActionSheetWithOptions(
@@ -1353,11 +1377,17 @@ function AppContent() {
                 style={[
                   styles.previewScrollContainer,
                   {
-                    maxHeight: Dimensions.get("window").height - 100, // Leave space for margins in pixels
-                    top: 50, // Top margin in pixels
+                    flex: 1,
                   },
                 ]}
-                contentContainerStyle={{ flexGrow: 1 }}
+                contentContainerStyle={[
+                  styles.previewCenterContainer,
+                  {
+                    minHeight: Dimensions.get("window").height,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
                 showsVerticalScrollIndicator={false}
               >
                 <View
@@ -1579,20 +1609,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: "#000000", // Black background
   },
+  previewCenterContainer: {
+    // Centering properties will be applied inline for proper dynamic values
+  },
   previewScrollContainer: {
-    position: "absolute",
     width: Dimensions.get("window").width,
-    left: 0,
   },
   previewContainerOverlay: {
     paddingTop: "5%",
     paddingBottom: "5%",
     borderRadius: 0,
-    minHeight: "100%",
   },
   previewText: {
     textAlignVertical: "top",
-    flex: 1,
     paddingHorizontal: "5%", // Text padding in pixels
   },
   measureText: {
