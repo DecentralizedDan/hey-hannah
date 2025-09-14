@@ -21,6 +21,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
+import { Ionicons } from "@expo/vector-icons";
 // Using FileSystem for simple JSON storage
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
@@ -750,6 +751,26 @@ function AppContent() {
     setImageToShare(null);
   };
 
+  const handleShareFromPreview = async () => {
+    try {
+      const uri = await captureRef(captureTextRef, {
+        format: "jpg",
+        quality: 1.0,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "image/jpeg",
+          dialogTitle: "Share your text image",
+        });
+      } else {
+        Alert.alert("Error", "Sharing is not available on this device.");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to share image.");
+    }
+  };
+
   const previewImageFromGallery = async (image) => {
     try {
       // Set transitioning state to hide content during switch
@@ -1438,6 +1459,88 @@ function AppContent() {
         <TouchableWithoutFeedback onPress={exitPreviewMode}>
           <View style={styles.previewOverlay}>
             <View style={styles.previewOverlayBackground} />
+
+            {/* Preview header with conditional buttons based on preview source */}
+            <View style={styles.previewHeader}>
+              {previewReturnView === "gallery" ? (
+                // Gallery preview: GALLERY, EDIT buttons on left, SHARE on right
+                <>
+                  <View style={styles.previewLeftButtons}>
+                    <TouchableOpacity
+                      style={styles.controlButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        exitPreviewMode(); // This will return to gallery
+                      }}
+                    >
+                      <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                        <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>📁</Text>
+                      </View>
+                      <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>GALLERY</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.controlButton}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        // Exit preview and go to edit view for this image
+                        setIsPreviewMode(false);
+                        setCurrentView("create");
+                        setPreviewReturnView("create");
+                      }}
+                    >
+                      <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                        <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>🖋</Text>
+                      </View>
+                      <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>EDIT</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.controlButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleShareFromPreview();
+                    }}
+                  >
+                    <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                      <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
+                    </View>
+                    <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                // Create view preview: EDIT on left, SHARE on right
+                <>
+                  <TouchableOpacity
+                    style={styles.controlButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      exitPreviewMode();
+                    }}
+                  >
+                    <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                      <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>🖋</Text>
+                    </View>
+                    <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>EDIT</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.controlButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleShareFromPreview();
+                    }}
+                  >
+                    <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                      <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
+                    </View>
+                    <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
             {text.length > 0 ? (
               <ScrollView
                 style={[
@@ -1449,9 +1552,11 @@ function AppContent() {
                 contentContainerStyle={[
                   styles.previewCenterContainer,
                   {
-                    minHeight: Dimensions.get("window").height,
+                    minHeight: Dimensions.get("window").height - 120, // Available height below buttons
                     justifyContent: "center",
                     alignItems: "center",
+                    paddingTop: 120, // Space for header buttons and labels in pixels
+                    paddingBottom: 0, // No bottom padding needed
                   },
                 ]}
                 showsVerticalScrollIndicator={false}
@@ -1637,15 +1742,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: "5%",
     paddingTop: "5%",
     paddingBottom: "5%",
+    flex: 1,
+    justifyContent: "space-between",
   },
   captureText: {
     textAlignVertical: "top",
-    flex: 1,
+    flex: 0,
   },
   watermark: {
     fontSize: 12, // Watermark text size in pixels
     textAlign: "center",
-    marginTop: 20, // Top margin in pixels
+    marginTop: 40, // Minimum top margin from text in pixels
     opacity: 0.7,
     fontStyle: "italic",
   },
@@ -1674,6 +1781,20 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: "#000000", // Black background
+  },
+  previewHeader: {
+    position: "absolute",
+    top: 60, // Space from top of screen in pixels
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20, // Horizontal padding in pixels
+    zIndex: 1001, // Above the overlay background
+  },
+  previewLeftButtons: {
+    flexDirection: "row",
+    gap: 20, // Space between BACK and EDIT buttons in pixels
   },
   previewCenterContainer: {
     // Centering properties will be applied inline for proper dynamic values
