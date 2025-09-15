@@ -1,6 +1,6 @@
 # Hey Hannah
 
-<img src="assets/screenshot-1.png" alt="Hey Hannah Screenshot 1" width="30%" style="margin-right: 4%;"> <img src="assets/screenshot-2.png" alt="Hey Hannah Screenshot 2" width="30%" style="margin-right: 4%;"> <img src="assets/screenshot-3.png" alt="Hey Hannah Screenshot 3" width="30%">
+<img src="assets/screenshot-1.jpg" alt="Hey Hannah Screenshot 1" width="30%" style="margin-right: 4%;"> <img src="assets/screenshot-2.jpg" alt="Hey Hannah Screenshot 2" width="30%" style="margin-right: 4%;"> <img src="assets/screenshot-3.jpg" alt="Hey Hannah Screenshot 3" width="30%">
 
 An open source iPhone app for creating text images.
 
