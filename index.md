@@ -6,22 +6,21 @@ description: Have something to say? Write it in Hey Hannah and post it to your s
 
 ## Overview
 
-Hey Hannah converts text into JPG images for sharing. Users create text-based images for social media, messaging, or other platforms. It's like a micro-blog you host on your phone!
+Hey Hannah is a free [iPhone app](https://apps.apple.com/us/app/hey-hannah/id6751516377) that converts your words into jpeg images for sharing. Write a message, choose your font & colors & more, and then share it on your socials, DM it to a friend, or just save it as a photo.
 
 ## Features
 
-- **Text Creation & Editing**: Perfectly format your text every time
-- **Image Export**: Save your text as JPG images
-- **Sharing**: Save your images as photos, iMessage them, or share them via socials
-- **Formatting Options**: Eight colors for background and text, three fonts, three alignments -- endless possibilities
+- **Text Formatting**: Choose just the right colors and fonts for your words
+- **Sharing**: Save your images as photos, share them via socials, or iMessage to friends
+- **Formatting Options**: Colors for background, for text, different fonts -- endless possibilities
 
 ## Distribution
 
-Hey Hannah is a **free app** on the Apple App Store.
+[Hey Hannah](https://apps.apple.com/us/app/hey-hannah/id6751516377) is a **free app** on the [Apple App Store](https://apps.apple.com/us/app/hey-hannah/id6751516377).
 
-## Open Source
+## Free & Open Source
 
-This project is open source and accepts new feature ideas contributions.
+This project is [open source](https://github.com/DecentralizedDan/hey-hannah) and accepts new feature ideas contributions.
 
 ## Privacy
 
