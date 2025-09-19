@@ -5,6 +5,7 @@ import {
   View,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Dimensions,
   StatusBar,
   TouchableWithoutFeedback,
@@ -21,6 +22,7 @@ import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
+import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 // Using FileSystem for simple JSON storage
 
@@ -71,10 +73,12 @@ function AppContent() {
   const [gallerySortMode, setGallerySortMode] = useState("newest");
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'favorites', 'random'
   const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
+  const [isHoldingShare, setIsHoldingShare] = useState(false); // Track if share button is being held
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
   const measureTextRef = useRef(null);
+  const shareHoldTimerRef = useRef(null);
 
   // Calculate font size based on text length
   useEffect(() => {
@@ -276,6 +280,48 @@ function AppContent() {
       { text: "Copy", onPress: copyImageToClipboard },
       { text: "Share", onPress: shareAsMessage },
     ]);
+  };
+
+  const handleSharePressIn = () => {
+    if (!text.trim()) {
+      return;
+    }
+
+    setIsHoldingShare(true);
+
+    // Start timer for hold detection (750ms)
+    shareHoldTimerRef.current = setTimeout(async () => {
+      // Trigger haptic feedback when hold-to-copy is activated
+      try {
+        // Check if haptics is available before calling
+        if (Haptics.impactAsync && typeof Haptics.impactAsync === "function") {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      } catch (error) {
+        // Haptic feedback may not be available on all devices or not properly linked
+        if (__DEV__) console.log("Haptic feedback not available:", error);
+      }
+
+      // Ensure keyboard is dismissed before capture to avoid snapshot warning
+      Keyboard.dismiss();
+
+      // Wait longer for keyboard dismissal and view settling to prevent snapshot warning
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Extended delay in milliseconds
+
+      // Auto-copy to clipboard after holding for 750ms
+      copyImageToClipboard();
+      setIsHoldingShare(false);
+    }, 750); // Hold duration in milliseconds
+  };
+
+  const handleSharePressOut = () => {
+    setIsHoldingShare(false);
+
+    // Clear the timer if button is released before hold duration
+    if (shareHoldTimerRef.current) {
+      clearTimeout(shareHoldTimerRef.current);
+      shareHoldTimerRef.current = null;
+    }
   };
 
   // Gallery functions
@@ -883,6 +929,15 @@ function AppContent() {
     loadGalleryImages();
   }, []);
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (shareHoldTimerRef.current) {
+        clearTimeout(shareHoldTimerRef.current);
+      }
+    };
+  }, []);
+
   const copyImageToClipboard = async () => {
     try {
       if (!text.trim()) {
@@ -906,6 +961,7 @@ function AppContent() {
           format: "png",
           quality: 1.0,
           result: "tmpfile",
+          afterScreenUpdates: true, // Ensures view is fully rendered before capture
         });
 
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
@@ -1250,12 +1306,27 @@ function AppContent() {
                 </TouchableOpacity>
 
                 {/* Share control */}
-                <TouchableOpacity style={styles.controlButton} onPress={handleShare}>
-                  <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
+                <Pressable
+                  style={styles.controlButton}
+                  onPress={handleShare}
+                  onPressIn={handleSharePressIn}
+                  onPressOut={handleSharePressOut}
+                >
+                  <View
+                    style={[
+                      styles.shareIcon,
+                      {
+                        borderColor: "#FFFFFF",
+                        backgroundColor: isHoldingShare
+                          ? "rgba(255, 255, 255, 0.2)"
+                          : "transparent",
+                      },
+                    ]}
+                  >
                     <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
                   </View>
                   <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
 

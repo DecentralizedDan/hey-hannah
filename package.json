@@ -12,6 +12,7 @@
     "expo": "53.0.22",
     "expo-clipboard": "^7.1.5",
     "expo-dev-client": "~5.2.4",
+    "expo-haptics": "^15.0.7",
     "expo-media-library": "^17.1.7",
     "expo-sharing": "^13.1.5",
     "expo-status-bar": "~2.2.3",
