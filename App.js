@@ -73,12 +73,16 @@ function AppContent() {
   const [gallerySortMode, setGallerySortMode] = useState("newest");
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'favorites', 'random'
   const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
-  const [isHoldingShare, setIsHoldingShare] = useState(false); // Track if share button is being held
+  const [isHoldingPreview, setIsHoldingPreview] = useState(false); // Track if preview button is being held
+  const [isHoldingNew, setIsHoldingNew] = useState(false); // Track if new button is being held
+  const [deletedText, setDeletedText] = useState(""); // Store deleted text for undo functionality
+  const [showUndo, setShowUndo] = useState(false); // Track if undo option should be shown
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
   const measureTextRef = useRef(null);
-  const shareHoldTimerRef = useRef(null);
+  const previewHoldTimerRef = useRef(null);
+  const newHoldTimerRef = useRef(null);
 
   // Calculate font size based on text length
   useEffect(() => {
@@ -174,6 +178,11 @@ function AppContent() {
     setText(newText);
     if (newText.length > 0 && !startedWriting) {
       setStartedWriting(true);
+    }
+    // Reset undo state when user types new text after deletion
+    if (showUndo && newText.length > 0) {
+      setShowUndo(false);
+      setDeletedText("");
     }
   };
 
@@ -282,15 +291,15 @@ function AppContent() {
     ]);
   };
 
-  const handleSharePressIn = () => {
+  const handlePreviewPressIn = () => {
     if (!text.trim()) {
       return;
     }
 
-    setIsHoldingShare(true);
+    setIsHoldingPreview(true);
 
     // Start timer for hold detection (750ms)
-    shareHoldTimerRef.current = setTimeout(async () => {
+    previewHoldTimerRef.current = setTimeout(async () => {
       // Trigger haptic feedback when hold-to-copy is activated
       try {
         // Check if haptics is available before calling
@@ -310,18 +319,63 @@ function AppContent() {
 
       // Auto-copy to clipboard after holding for 750ms
       copyImageToClipboard();
-      setIsHoldingShare(false);
+      setIsHoldingPreview(false);
     }, 750); // Hold duration in milliseconds
   };
 
-  const handleSharePressOut = () => {
-    setIsHoldingShare(false);
+  const handlePreviewPressOut = () => {
+    setIsHoldingPreview(false);
 
     // Clear the timer if button is released before hold duration
-    if (shareHoldTimerRef.current) {
-      clearTimeout(shareHoldTimerRef.current);
-      shareHoldTimerRef.current = null;
+    if (previewHoldTimerRef.current) {
+      clearTimeout(previewHoldTimerRef.current);
+      previewHoldTimerRef.current = null;
     }
+  };
+
+  const handleNewPressIn = () => {
+    if (!text.trim()) {
+      return;
+    }
+
+    setIsHoldingNew(true);
+
+    // Start timer for hold detection (750ms)
+    newHoldTimerRef.current = setTimeout(async () => {
+      // Trigger haptic feedback when hold-to-delete is activated
+      try {
+        // Check if haptics is available before calling
+        if (Haptics.impactAsync && typeof Haptics.impactAsync === "function") {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      } catch (error) {
+        // Haptic feedback may not be available on all devices or not properly linked
+        if (__DEV__) console.log("Haptic feedback not available:", error);
+      }
+
+      // Store current text for undo and clear it
+      setDeletedText(text);
+      setText("");
+      setShowUndo(true);
+      setIsHoldingNew(false);
+    }, 750); // Hold duration in milliseconds
+  };
+
+  const handleNewPressOut = () => {
+    setIsHoldingNew(false);
+
+    // Clear the timer if button is released before hold duration
+    if (newHoldTimerRef.current) {
+      clearTimeout(newHoldTimerRef.current);
+      newHoldTimerRef.current = null;
+    }
+  };
+
+  const handleUndo = () => {
+    // Restore the deleted text
+    setText(deletedText);
+    setDeletedText("");
+    setShowUndo(false);
   };
 
   // Gallery functions
@@ -929,11 +983,14 @@ function AppContent() {
     loadGalleryImages();
   }, []);
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (shareHoldTimerRef.current) {
-        clearTimeout(shareHoldTimerRef.current);
+      if (previewHoldTimerRef.current) {
+        clearTimeout(previewHoldTimerRef.current);
+      }
+      if (newHoldTimerRef.current) {
+        clearTimeout(newHoldTimerRef.current);
       }
     };
   }, []);
@@ -1217,9 +1274,27 @@ function AppContent() {
                 <TouchableOpacity onPress={handleGalleryView}>
                   <Text style={styles.navigationText}>Gallery</Text>
                 </TouchableOpacity>
-                {startedWriting && text.trim() && (
-                  <TouchableOpacity onPress={handleNewImage}>
-                    <Text style={styles.navigationText}>New</Text>
+                {startedWriting && text.trim() && !showUndo && (
+                  <Pressable
+                    onPress={handleNewImage}
+                    onPressIn={handleNewPressIn}
+                    onPressOut={handleNewPressOut}
+                  >
+                    <Text
+                      style={[
+                        styles.navigationText,
+                        {
+                          backgroundColor: isHoldingNew ? "rgba(255, 204, 2, 0.2)" : "transparent",
+                        },
+                      ]}
+                    >
+                      New
+                    </Text>
+                  </Pressable>
+                )}
+                {showUndo && (
+                  <TouchableOpacity onPress={handleUndo}>
+                    <Text style={styles.navigationText}>Undo</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -1298,35 +1373,35 @@ function AppContent() {
                 </TouchableOpacity>
 
                 {/* Preview control */}
-                <TouchableOpacity style={styles.controlButton} onPress={togglePreviewMode}>
-                  <View style={[styles.previewIcon, { borderColor: "#FFFFFF" }]}>
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>📄</Text>
-                  </View>
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>PREVIEW</Text>
-                </TouchableOpacity>
-
-                {/* Share control */}
                 <Pressable
                   style={styles.controlButton}
-                  onPress={handleShare}
-                  onPressIn={handleSharePressIn}
-                  onPressOut={handleSharePressOut}
+                  onPress={togglePreviewMode}
+                  onPressIn={handlePreviewPressIn}
+                  onPressOut={handlePreviewPressOut}
                 >
                   <View
                     style={[
-                      styles.shareIcon,
+                      styles.previewIcon,
                       {
                         borderColor: "#FFFFFF",
-                        backgroundColor: isHoldingShare
+                        backgroundColor: isHoldingPreview
                           ? "rgba(255, 255, 255, 0.2)"
                           : "transparent",
                       },
                     ]}
                   >
+                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>📄</Text>
+                  </View>
+                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>PREVIEW</Text>
+                </Pressable>
+
+                {/* Share control */}
+                <TouchableOpacity style={styles.controlButton} onPress={handleShare}>
+                  <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
                     <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
                   </View>
                   <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
             )}
 
