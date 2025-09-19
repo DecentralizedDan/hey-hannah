@@ -69,7 +69,7 @@ function AppContent() {
   const [imageToShare, setImageToShare] = useState(null);
   const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
   const [gallerySortMode, setGallerySortMode] = useState("newest");
-  const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'random'
+  const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'favorites', 'random'
   const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
@@ -119,7 +119,8 @@ function AppContent() {
 
   const toggleGallerySortMode = () => {
     setGallerySortMode((prev) => {
-      if (prev === "newest") return "oldest";
+      if (prev === "newest") return "favorites";
+      if (prev === "favorites") return "oldest";
       if (prev === "oldest") return "random";
       return "newest"; // from random back to newest
     });
@@ -138,6 +139,14 @@ function AppContent() {
     switch (gallerySortMode) {
       case "oldest":
         return imagesCopy.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      case "favorites":
+        return imagesCopy.sort((a, b) => {
+          // First sort by favorite status (favorites first)
+          if (a.isFavorited && !b.isFavorited) return -1;
+          if (!a.isFavorited && b.isFavorited) return 1;
+          // Then by newest for items with same favorite status
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
       case "random":
         // Fisher-Yates shuffle algorithm
         for (let i = imagesCopy.length - 1; i > 0; i--) {
@@ -1168,6 +1177,8 @@ function AppContent() {
                       ? "Newest"
                       : gallerySortMode === "oldest"
                       ? "Oldest"
+                      : gallerySortMode === "favorites"
+                      ? "Favorites"
                       : "Random"}
                   </Text>
                 </TouchableOpacity>
