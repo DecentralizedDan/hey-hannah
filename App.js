@@ -24,6 +24,11 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
+import { Courgette_400Regular } from "@expo-google-fonts/courgette";
+import { PermanentMarker_400Regular } from "@expo-google-fonts/permanent-marker";
+import { BlackOpsOne_400Regular } from "@expo-google-fonts/black-ops-one";
+import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
 // Using FileSystem for simple JSON storage
 
 const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
@@ -47,11 +52,25 @@ const FONT_FAMILIES = [
   "System", // Default system font
   "Courier", // Built-in monospace font available on both iOS and Android
   "Times New Roman", // Classic serif font available on both iOS and Android
+  "Helvetica-Bold", // Bold weight of classic Helvetica font
+  "Impact", // Strong condensed font for maximum impact
+  "Courgette_400Regular", // Casual script with rounded characters
+  "PermanentMarker_400Regular", // Bold marker-style font for creative impact
+  "BlackOpsOne_400Regular", // Military stencil style, very bold and strong
+  "Quicksand_400Regular", // Modern rounded font, friendly like Comic Sans
 ];
 
 function AppContent() {
   const insets = useSafeAreaInsets();
   const baseSize = 32; // font size in pixels
+
+  // Load Google Fonts
+  const [fontsLoaded] = useFonts({
+    Courgette_400Regular,
+    PermanentMarker_400Regular,
+    BlackOpsOne_400Regular,
+    Quicksand_400Regular,
+  });
 
   const [text, setText] = useState("");
   const [backgroundColorIndex, setBackgroundColorIndex] = useState(5); // default yellow background
@@ -283,12 +302,7 @@ function AppContent() {
       return;
     }
 
-    Alert.alert("Share Text Image", "How will you share your text:", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Save", onPress: saveToPhotos },
-      { text: "Copy", onPress: copyImageToClipboard },
-      { text: "Share", onPress: shareAsMessage },
-    ]);
+    shareAsMessage();
   };
 
   const handlePreviewPressIn = () => {
@@ -1200,6 +1214,11 @@ function AppContent() {
       Alert.alert("Error", "Failed to share image.");
     }
   };
+
+  // Wait for fonts to load
+  if (!fontsLoaded) {
+    return null; // or a loading screen
+  }
 
   return (
     <>

@@ -9,9 +9,17 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/allura": "^0.4.2",
+    "@expo-google-fonts/black-ops-one": "^0.4.1",
+    "@expo-google-fonts/courgette": "^0.4.1",
+    "@expo-google-fonts/fredoka-one": "^0.2.3",
+    "@expo-google-fonts/kaushan-script": "^0.4.1",
+    "@expo-google-fonts/permanent-marker": "^0.4.0",
+    "@expo-google-fonts/quicksand": "^0.4.1",
     "expo": "53.0.22",
     "expo-clipboard": "^7.1.5",
     "expo-dev-client": "~5.2.4",
+    "expo-font": "~13.3.2",
     "expo-haptics": "^15.0.7",
     "expo-media-library": "^17.1.7",
     "expo-sharing": "^13.1.5",
