@@ -23,7 +23,6 @@ import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { Courgette_400Regular } from "@expo-google-fonts/courgette";
 import { PermanentMarker_400Regular } from "@expo-google-fonts/permanent-marker";
@@ -31,7 +30,7 @@ import { BlackOpsOne_400Regular } from "@expo-google-fonts/black-ops-one";
 import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
 // Using FileSystem for simple JSON storage
 
-const COLORS = ["white", "black", "red", "blue", "green", "yellow", "purple", "orange"];
+const COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "white", "black"];
 
 const COLOR_VALUES = {
   white: "#FFFFFF",
@@ -73,8 +72,8 @@ function AppContent() {
   });
 
   const [text, setText] = useState("");
-  const [backgroundColorIndex, setBackgroundColorIndex] = useState(5); // default yellow background
-  const [textColorIndex, setTextColorIndex] = useState(3); // default blue text
+  const [backgroundColorIndex, setBackgroundColorIndex] = useState(2); // default yellow background
+  const [textColorIndex, setTextColorIndex] = useState(4); // default blue text
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -1106,7 +1105,7 @@ function AppContent() {
           // The capture ref should always be available now since it's always rendered
 
           // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
+          await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
@@ -1173,7 +1172,7 @@ function AppContent() {
           // The capture ref should always be available now since it's always rendered
 
           // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 300)); // Increased delay in milliseconds
+          await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
           const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
@@ -1208,7 +1207,7 @@ function AppContent() {
       };
 
       // Wait for keyboard to dismiss and UI to settle before sharing
-      setTimeout(performShare, 1000); // Delay in milliseconds
+      setTimeout(performShare, 300); // Reduced delay in milliseconds
     } catch (error) {
       if (__DEV__) console.error("Share error:", error);
       Alert.alert("Error", "Failed to share image.");
