@@ -2205,7 +2205,23 @@ function AppContent() {
                   closeShareModal();
                   try {
                     if (await Sharing.isAvailableAsync()) {
-                      await Sharing.shareAsync(imageToShare.path, {
+                      // Check if the stored file exists and is accessible
+                      const fileInfo = await FileSystem.getInfoAsync(imageToShare.path);
+                      let shareUri = imageToShare.path;
+
+                      if (!fileInfo.exists) {
+                        // File doesn't exist, recreate by restoring the image and capturing it
+                        restoreImageFromGallery(imageToShare);
+
+                        // Wait a moment for the image to render, then capture it
+                        await new Promise((resolve) => setTimeout(resolve, 100));
+                        shareUri = await captureRef(captureTextRef, {
+                          format: "jpg",
+                          quality: 1.0,
+                        });
+                      }
+
+                      await Sharing.shareAsync(shareUri, {
                         mimeType: "image/jpeg",
                         dialogTitle: "Share your text image",
                       });
@@ -2213,7 +2229,11 @@ function AppContent() {
                       Alert.alert("Error", "Sharing is not available on this device.");
                     }
                   } catch (error) {
-                    Alert.alert("Error", "Failed to share image.");
+                    console.error("Share error:", error);
+                    Alert.alert(
+                      "Error",
+                      `Failed to share image: ${error.message || error.toString()}`
+                    );
                   }
                 }}
               >
@@ -2690,7 +2710,7 @@ const styles = StyleSheet.create({
     borderRadius: 8, // Corner radius in pixels
     padding: 10, // Inner padding in pixels
     justifyContent: "flex-start",
-    alignItems: "left",
+    alignItems: "flex-start",
     overflow: "hidden", // Clip content that exceeds height
   },
   thumbnailText: {
