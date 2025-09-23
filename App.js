@@ -15,6 +15,7 @@ import {
   Alert,
   ScrollView,
   ActionSheetIOS,
+  Animated,
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
@@ -32,6 +33,7 @@ import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
 
 const COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "white", "black"];
 
+// Legacy COLOR_VALUES for backward compatibility
 const COLOR_VALUES = {
   white: "#FFFFFF",
   black: "#000000",
@@ -42,6 +44,33 @@ const COLOR_VALUES = {
   purple: "#800080",
   orange: "#FFA500",
 };
+
+// All 64 colors organized into 8 palettes of 8 colors each
+const ALL_COLORS = [
+  // 0: Default palette (improved versions of current colors)
+  ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
+
+  // 1: Pastel palette
+  ["#FFB3B3", "#FFCCAA", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
+
+  // 2: Earth tones palette
+  ["#CC6633", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#996699", "#F5F0EA", "#3D3D3D"],
+
+  // 3: Ocean palette
+  ["#FF6B6B", "#FF9F6B", "#FFD56B", "#6BFF9F", "#6BAAFF", "#9F6BFF", "#F0FDFF", "#1A3B4D"],
+
+  // 4: Sunset palette
+  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#FF6B6B", "#E56B9D", "#D67AFF", "#FFF8F0", "#4D2D1A"],
+
+  // 5: Pure colors (highly saturated)
+  ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
+
+  // 6: Jewel tones palette
+  ["#990033", "#CC4400", "#998800", "#004D66", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
+
+  // 7: Muted palette
+  ["#AA6666", "#BB8866", "#BBAA66", "#66AA88", "#6688AA", "#8866AA", "#EEEEEE", "#444444"],
+];
 
 const GOLDEN_COLOR = "#FFCC02";
 
@@ -75,6 +104,19 @@ function AppContent() {
   const [backgroundColorIndex, setBackgroundColorIndex] = useState(2); // default yellow background
   const [textColorIndex, setTextColorIndex] = useState(4); // default blue text
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
+
+  // Color palette state management
+  const [bgColorMode, setBgColorMode] = useState("palette"); // "palette" or "variations"
+  const [bgColorModeSelection, setBgColorModeSelection] = useState(0); // 0-7 (palette or variation index)
+  const [textColorMode, setTextColorMode] = useState("palette"); // "palette" or "variations"
+  const [textColorModeSelection, setTextColorModeSelection] = useState(0); // 0-7 (palette or variation index)
+
+  // Color selection menu state
+  const [colorMenuVisible, setColorMenuVisible] = useState(false);
+  const [colorMenuType, setColorMenuType] = useState("background"); // "background" or "text"
+  const [highlightedRow, setHighlightedRow] = useState(-1); // -1 means no highlight
+  const [highlightedColumn, setHighlightedColumn] = useState(-1); // -1 means no highlight
+  const colorMenuAnimation = useRef(new Animated.Value(0)).current;
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -135,6 +177,88 @@ function AppContent() {
     setTextColorIndex((prev) => (prev + 1) % COLORS.length);
   };
 
+  // Color menu functions
+  const openColorMenu = (type) => {
+    setColorMenuType(type);
+    setColorMenuVisible(true);
+    setHighlightedRow(-1);
+    setHighlightedColumn(-1);
+
+    Animated.timing(colorMenuAnimation, {
+      toValue: 1,
+      duration: 300, // Animation duration in milliseconds
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeColorMenu = () => {
+    Animated.timing(colorMenuAnimation, {
+      toValue: 0,
+      duration: 250, // Slightly faster close animation in milliseconds
+      useNativeDriver: true,
+    }).start(() => {
+      setColorMenuVisible(false);
+      setHighlightedRow(-1);
+      setHighlightedColumn(-1);
+    });
+  };
+
+  const selectPalette = (paletteIndex) => {
+    if (colorMenuType === "background") {
+      setBgColorMode("palette");
+      setBgColorModeSelection(paletteIndex);
+      // Keep the same color position in the new palette
+      // backgroundColorIndex stays the same
+    } else {
+      setTextColorMode("palette");
+      setTextColorModeSelection(paletteIndex);
+      // textColorIndex stays the same
+    }
+    setHighlightedRow(paletteIndex);
+    setHighlightedColumn(-1);
+  };
+
+  const selectColorVariation = (colorIndex) => {
+    if (colorMenuType === "background") {
+      setBgColorMode("variations");
+      setBgColorModeSelection(colorIndex);
+      // Choose a random palette that's different from current
+      const currentPalette = backgroundColorIndex;
+      let newPalette;
+      do {
+        newPalette = Math.floor(Math.random() * 8);
+      } while (newPalette === currentPalette && ALL_COLORS.length > 1);
+      setBackgroundColorIndex(newPalette);
+    } else {
+      setTextColorMode("variations");
+      setTextColorModeSelection(colorIndex);
+      // Choose a random palette that's different from current
+      const currentPalette = textColorIndex;
+      let newPalette;
+      do {
+        newPalette = Math.floor(Math.random() * 8);
+      } while (newPalette === currentPalette && ALL_COLORS.length > 1);
+      setTextColorIndex(newPalette);
+    }
+    setHighlightedColumn(colorIndex);
+    setHighlightedRow(-1);
+  };
+
+  const selectDirectColor = (paletteIndex, colorIndex) => {
+    if (colorMenuType === "background") {
+      setBgColorMode("palette");
+      setBgColorModeSelection(paletteIndex);
+      setBackgroundColorIndex(colorIndex);
+    } else {
+      setTextColorMode("palette");
+      setTextColorModeSelection(paletteIndex);
+      setTextColorIndex(colorIndex);
+    }
+    setHighlightedRow(-1);
+    setHighlightedColumn(-1);
+    closeColorMenu();
+  };
+
   const cycleAlignment = () => {
     setAlignment((prev) => (prev + 1) % ALIGNMENTS.length);
   };
@@ -152,11 +276,32 @@ function AppContent() {
     });
   };
 
+  // Helper functions to get current colors from new palette system
+  const getCurrentBackgroundColor = () => {
+    if (bgColorMode === "palette") {
+      return ALL_COLORS[bgColorModeSelection][backgroundColorIndex];
+    } else {
+      // variations mode - bgColorModeSelection is the color type (0=red, 1=orange, etc.)
+      // backgroundColorIndex is the palette index (0-7)
+      return ALL_COLORS[backgroundColorIndex][bgColorModeSelection];
+    }
+  };
+
+  const getCurrentTextColor = () => {
+    if (textColorMode === "palette") {
+      return ALL_COLORS[textColorModeSelection][textColorIndex];
+    } else {
+      // variations mode - textColorModeSelection is the color type (0=red, 1=orange, etc.)
+      // textColorIndex is the palette index (0-7)
+      return ALL_COLORS[textColorIndex][textColorModeSelection];
+    }
+  };
+
   const currentAlignment = ALIGNMENTS[alignment];
-  const currentBackgroundColor = COLOR_VALUES[COLORS[backgroundColorIndex]];
+  const currentBackgroundColor = getCurrentBackgroundColor();
   const currentFontFamily =
     FONT_FAMILIES[fontFamily] === "System" ? undefined : FONT_FAMILIES[fontFamily];
-  const currentTextColor = COLOR_VALUES[COLORS[textColorIndex]];
+  const currentTextColor = getCurrentTextColor();
 
   // Create sorted gallery images based on current sort mode
   const getSortedGalleryImages = () => {
@@ -1341,7 +1486,11 @@ function AppContent() {
             {!isPreviewMode && currentView === "create" && (
               <View style={[styles.topControlsContainer, { paddingTop: 20 }]}>
                 {/* Background color control */}
-                <TouchableOpacity style={styles.controlButton} onPress={cycleBackgroundColor}>
+                <TouchableOpacity
+                  style={styles.controlButton}
+                  onPress={cycleBackgroundColor}
+                  onLongPress={() => openColorMenu("background")}
+                >
                   <View
                     style={[
                       styles.colorCircle,
@@ -1355,7 +1504,11 @@ function AppContent() {
                 </TouchableOpacity>
 
                 {/* Text color control */}
-                <TouchableOpacity style={styles.controlButton} onPress={cycleTextColor}>
+                <TouchableOpacity
+                  style={styles.controlButton}
+                  onPress={cycleTextColor}
+                  onLongPress={() => openColorMenu("text")}
+                >
                   <View
                     style={[
                       styles.colorCircle,
@@ -1875,6 +2028,86 @@ function AppContent() {
           </View>
         </View>
       )}
+
+      {/* Color selection menu */}
+      {colorMenuVisible && (
+        <Animated.View
+          style={[
+            styles.colorMenuOverlay,
+            {
+              transform: [
+                {
+                  translateY: colorMenuAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [Dimensions.get("window").width, 0], // Slide up from bottom in pixels
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <TouchableWithoutFeedback onPress={closeColorMenu}>
+            <View style={styles.colorMenuBackground} />
+          </TouchableWithoutFeedback>
+
+          <View style={styles.colorMenuContainer}>
+            {/* 9x9 Grid */}
+            <View style={styles.colorGrid}>
+              {/* Top row: empty corner + down arrows */}
+              <View style={styles.colorGridRow}>
+                {/* Empty top-left corner */}
+                <View style={styles.colorCell} />
+
+                {/* Down arrows for color variations */}
+                {COLORS.map((_, colorIndex) => (
+                  <TouchableOpacity
+                    key={`down-arrow-${colorIndex}`}
+                    style={[
+                      styles.colorCell,
+                      styles.arrowCell,
+                      highlightedColumn === colorIndex && styles.highlightedCell,
+                    ]}
+                    onPress={() => selectColorVariation(colorIndex)}
+                  >
+                    <Text style={styles.arrowText}>↓</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* 8 rows of colors with right arrows */}
+              {ALL_COLORS.map((palette, paletteIndex) => (
+                <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
+                  {/* Right arrow for palette selection */}
+                  <TouchableOpacity
+                    style={[
+                      styles.colorCell,
+                      styles.arrowCell,
+                      highlightedRow === paletteIndex && styles.highlightedCell,
+                    ]}
+                    onPress={() => selectPalette(paletteIndex)}
+                  >
+                    <Text style={styles.arrowText}>→</Text>
+                  </TouchableOpacity>
+
+                  {/* 8 colors in this palette */}
+                  {palette.map((color, colorIndex) => (
+                    <TouchableOpacity
+                      key={`color-${paletteIndex}-${colorIndex}`}
+                      style={[
+                        styles.colorCell,
+                        { backgroundColor: color },
+                        (highlightedRow === paletteIndex || highlightedColumn === colorIndex) &&
+                          styles.highlightedCell,
+                      ]}
+                      onPress={() => selectDirectColor(paletteIndex, colorIndex)}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
+      )}
     </>
   );
 }
@@ -2287,6 +2520,58 @@ const styles = StyleSheet.create({
     fontSize: 16, // Font size in pixels
     fontWeight: "600",
     textAlign: "center",
+  },
+
+  // Color menu styles
+  colorMenuOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: Dimensions.get("window").width, // Square grid, height equals screen width in pixels
+    zIndex: 1003, // Above all other modals
+  },
+  colorMenuBackground: {
+    position: "absolute",
+    top: -Dimensions.get("window").height, // Cover entire screen above menu
+    left: 0,
+    right: 0,
+    height: Dimensions.get("window").height, // Full screen height in pixels
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent overlay
+  },
+  colorMenuContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000000", // Black background for menu area
+  },
+  colorGrid: {
+    width: Dimensions.get("window").width, // Full screen width in pixels
+    height: Dimensions.get("window").width, // Square grid in pixels
+  },
+  colorGridRow: {
+    flexDirection: "row",
+    flex: 1,
+  },
+  colorCell: {
+    flex: 1,
+    borderWidth: 1, // Border thickness in pixels
+    borderColor: "#333333", // Dark gray border
+  },
+  arrowCell: {
+    backgroundColor: "#222222", // Dark background for arrows
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  arrowText: {
+    color: "#FFFFFF", // White arrow text
+    fontSize: 24, // Arrow size in pixels
+    fontWeight: "bold",
+  },
+  highlightedCell: {
+    backgroundColor: "rgba(255, 204, 2, 0.3)", // Golden highlight with transparency
+    borderColor: "#FFCC02", // Golden border
+    borderWidth: 2, // Thicker border for highlight in pixels
   },
 });
 

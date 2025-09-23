@@ -1,0 +1,119 @@
+# Color Selection Menu Feature Decisions
+
+## Overview
+Adding 64 new colors organized into 8 palettes of 8 colors each, plus a new UI for color selection.
+
+## Color Palette Structure
+- **Total Colors**: 64 colors (8 palettes × 8 colors each)
+- **Base Colors**: red, orange, yellow, green, blue, purple, white, black (same sequence for each palette)
+- **Current Default**: Keep existing palette as the first/default palette
+
+## 8 Color Palettes (in order by intensity)
+1. **Default** - Current colors (can be adjusted/improved)
+2. **Pastel** - Soft, muted versions
+3. **Earth Tones** - Browns, tans, forest greens, natural colors
+4. **Ocean** - Blues, teals, aquas, sea greens
+5. **Sunset** - Warm oranges, pinks, corals
+6. **Pure Colors** - More saturated versions of current colors
+7. **Jewel Tones** - Deep, rich colors
+8. **Muted** - Subdued, low-saturation versions
+
+## Color Design Principles
+- **Visual Harmony**: Primary concern - each palette should feel cohesive
+- **Intensity Ordering**: Palettes ordered from lightest/softest to most intense/saturated
+- **Saturation Flexibility**: Some natural variation in brightness/saturation within palettes is acceptable
+- **White Variations**: Each palette has unique off-white harmonious with palette theme
+- **Black Variations**: Each palette has unique near-black harmonious with palette theme
+- **Contrast**: Visual harmony prioritized over accessibility contrast requirements
+
+## Color Selection Menu UI
+- **Trigger**: Long press on Text or BG buttons
+- **Layout**: 8×8 grid showing all 64 colors
+- **Organization**: 
+  - Horizontal rows = color palettes (8 different colors)
+  - Vertical columns = color variations (8 versions of same color)
+- **Visual Feedback**: Selected color highlighted with border/glow
+- **Real-time Updates**: Text/BG button and image update immediately on selection
+- **Menu Dismissal**: Touch anywhere outside menu to close
+
+## Navigation Controls
+- **Right Arrows (Left Side)**: Select entire palette (horizontal row)
+  - Whole row highlights when clicked
+  - Changes current palette for Text or BG to that row of 8 colors
+  - Image updates to show corresponding color from new palette (e.g., default blue → pastel blue)
+- **Down Arrows (Top)**: Select color variation (vertical column)
+  - Whole column highlights when clicked
+  - Changes current palette to 8 variations of selected color
+  - Random color from selected column replaces current color
+- **Direct Color Selection**: Click any color directly
+  - Changes current color for Text or BG to that specific color immediately
+  - Updates Text/BG button and image in real-time
+
+## User Interaction Model
+- Users can select either:
+  1. **Palette Mode**: 8 different colors (red, orange, yellow, etc.)
+  2. **Color Variation Mode**: 8 variations of same color (8 blues, 8 whites, etc.)
+- Separate selection state for Text colors and Background colors
+- Users can choose same or different palettes for Text and Background
+
+## State Management
+- App maintains separate state for Text and Background:
+  - `textColorMode` / `bgColorMode`: "palette" or "variations"
+  - `textColorModeSelection` / `bgColorModeSelection`: array index (0-7)
+  - `textColorIndex` / `bgColorIndex`: current color index within mode (0-7)
+- Initial state: Both start in "palette" mode, selection 0 (default palette)
+- Initial colors: BG yellow (index 2), Text blue (index 4)
+- Preserve existing color cycling functionality with new palette system
+
+## Data Structure
+- `allColors`: Array of 8 arrays, each containing 8 color values
+- Index mapping:
+  - Mode "palette" + selection 0 = default color palette (row 0)
+  - Mode "variations" + selection 0 = all red variations (column 0)
+
+## UI Specifications
+- **Grid Layout**: 9×9 grid (top-left position empty, arrows + 8×8 colors)
+- **Grid Size**: Height and width equal to screen width
+- **Color Squares**: Perfect squares, touching each other
+- **Arrows**: Same size as one color square
+- **Animation**: Smooth slide up from bottom with easing
+- **Highlights**: Background highlight behind entire row/column, persists until new selection or menu close
+- **Random Selection**: Choose any color different from currently active one
+- **Visual Feedback**: Text/BG button color and image update in real-time, no additional indicators needed
+
+## Additional Implementation Details
+
+### Color Index Mapping
+- When switching modes: maintain logical color correspondence
+- Palette mode index 4 (blue) → Variations mode selects blue column
+- Random selection avoids currently active color
+
+### Grid Layout Details
+- 9×9 total grid: empty top-left corner + 8 arrows + 64 colors
+- Screen-width dimensions for full grid
+- Perfect square cells, no spacing between colors
+- Arrow cells same size as color cells
+
+### State Variables Structure
+- Text state: `textColorMode`, `textColorModeSelection`, `textColorIndex`  
+- Background state: `bgColorMode`, `bgColorModeSelection`, `bgColorIndex`
+- Both start: mode "palette", selection 0, BG index 2, Text index 4
+
+### Interaction Behaviors
+- Long press Text/BG buttons triggers color menu
+- Touch outside menu to dismiss
+- Real-time updates: button colors + image preview
+- Row/column highlights persist until new selection or menu close
+- Cycling buttons use currently selected color set (8 colors)
+
+### Animation Specifications
+- Smooth slide up from bottom with easing
+- Menu covers full screen width
+- No additional visual indicators needed beyond real-time updates
+
+## Implementation Notes
+- Maintain current cycling behavior for Text and BG buttons
+- Current default: yellow background (index 2), blue text (index 4)
+- Preserve existing color cycling functionality
+- Real-time preview: changes visible immediately in main image
+- Menu positioning: slides up from bottom of screen
