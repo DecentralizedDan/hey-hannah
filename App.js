@@ -51,16 +51,16 @@ const ALL_COLORS = [
   ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
 
   // 1: Pastel palette
-  ["#FFB3B3", "#FFCCAA", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
+  ["#FFB3B3", "#FFB380", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
 
   // 2: Earth tones palette
-  ["#CC6633", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#8855AA", "#F5F0EA", "#3D3D3D"],
+  ["#D85555", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#8855AA", "#F5F0EA", "#3D3D3D"],
 
   // 3: Ocean palette
   ["#FF6B6B", "#FF9F6B", "#FFD56B", "#6BFF9F", "#6BAAFF", "#9F6BFF", "#F0FDFF", "#4A4A4A"],
 
   // 4: Sunset palette
-  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#FF6B6B", "#E56B9D", "#D67AFF", "#FFF8F0", "#2A2A2A"],
+  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#8CFF6B", "#6B9DFF", "#D67AFF", "#FFF8F0", "#2A2A2A"],
 
   // 5: Pure colors (highly saturated)
   ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
@@ -68,8 +68,8 @@ const ALL_COLORS = [
   // 6: Jewel tones palette
   ["#990033", "#CC4400", "#998800", "#004D66", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
 
-  // 7: Muted palette
-  ["#AA6666", "#BB8866", "#BBAA66", "#66AA88", "#6688AA", "#8866AA", "#D8D8D8", "#444444"],
+  // 7: Toxic/Garish palette
+  ["#FF0080", "#FF6600", "#CCFF00", "#00FF80", "#0080FF", "#8000FF", "#FFFFFF", "#000000"],
 ];
 
 const GOLDEN_COLOR = "#FFCC02";
@@ -2078,14 +2078,28 @@ function AppContent() {
                 {/* Empty top-left corner */}
                 <View style={styles.colorCell} />
 
-                {/* Down arrows for color variations */}
+                {/* Radio buttons for color variations */}
                 {COLORS.map((_, colorIndex) => (
                   <TouchableOpacity
-                    key={`down-arrow-${colorIndex}`}
-                    style={[styles.colorCell, styles.arrowCell]}
+                    key={`radio-column-${colorIndex}`}
+                    style={[styles.colorCell, styles.radioCell]}
                     onPress={() => selectColorVariation(colorIndex)}
                   >
-                    <Text style={styles.arrowText}>↓</Text>
+                    <View style={styles.radioButton}>
+                      <View
+                        style={[
+                          styles.radioButtonInner,
+                          (colorMenuType === "background" &&
+                            bgColorMode === "variations" &&
+                            bgColorModeSelection === colorIndex) ||
+                          (colorMenuType === "text" &&
+                            textColorMode === "variations" &&
+                            textColorModeSelection === colorIndex)
+                            ? styles.radioButtonSelected
+                            : null,
+                        ]}
+                      />
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -2093,12 +2107,26 @@ function AppContent() {
               {/* 8 rows of colors with right arrows */}
               {ALL_COLORS.map((palette, paletteIndex) => (
                 <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
-                  {/* Right arrow for palette selection */}
+                  {/* Radio button for palette selection */}
                   <TouchableOpacity
-                    style={[styles.colorCell, styles.arrowCell]}
+                    style={[styles.colorCell, styles.radioCell]}
                     onPress={() => selectPalette(paletteIndex)}
                   >
-                    <Text style={styles.arrowText}>→</Text>
+                    <View style={styles.radioButton}>
+                      <View
+                        style={[
+                          styles.radioButtonInner,
+                          (colorMenuType === "background" &&
+                            bgColorMode === "palette" &&
+                            bgColorModeSelection === paletteIndex) ||
+                          (colorMenuType === "text" &&
+                            textColorMode === "palette" &&
+                            textColorModeSelection === paletteIndex)
+                            ? styles.radioButtonSelected
+                            : null,
+                        ]}
+                      />
+                    </View>
                   </TouchableOpacity>
 
                   {/* 8 colors in this palette with row highlight overlay */}
@@ -2586,15 +2614,29 @@ const styles = StyleSheet.create({
     borderWidth: 1, // Border thickness in pixels
     borderColor: "#333333", // Dark gray border
   },
-  arrowCell: {
-    backgroundColor: "#222222", // Dark background for arrows
+  radioCell: {
+    backgroundColor: "#222222", // Dark background for radio buttons
     justifyContent: "center",
     alignItems: "center",
   },
-  arrowText: {
-    color: "#FFFFFF", // White arrow text
-    fontSize: 24, // Arrow size in pixels
-    fontWeight: "bold",
+  radioButton: {
+    width: 20, // Radio button outer circle width in pixels
+    height: 20, // Radio button outer circle height in pixels
+    borderRadius: 10, // Circular shape in pixels
+    borderWidth: 2, // Border thickness in pixels
+    borderColor: "#FFFFFF", // White border
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  radioButtonInner: {
+    width: 10, // Radio button inner circle width in pixels
+    height: 10, // Radio button inner circle height in pixels
+    borderRadius: 5, // Circular shape in pixels
+    backgroundColor: "transparent",
+  },
+  radioButtonSelected: {
+    backgroundColor: "#FFCC02", // Golden fill when selected
   },
   colorRowContainer: {
     flexDirection: "row",
