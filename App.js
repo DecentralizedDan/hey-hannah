@@ -181,8 +181,28 @@ function AppContent() {
   const openColorMenu = (type) => {
     setColorMenuType(type);
     setColorMenuVisible(true);
-    setHighlightedRow(-1);
-    setHighlightedColumn(-1);
+
+    // Highlight the currently selected palette or variation
+    if (type === "background") {
+      if (bgColorMode === "palette") {
+        setHighlightedRow(bgColorModeSelection);
+        setHighlightedColumn(-1);
+      } else {
+        // variations mode
+        setHighlightedRow(-1);
+        setHighlightedColumn(bgColorModeSelection);
+      }
+    } else {
+      // text
+      if (textColorMode === "palette") {
+        setHighlightedRow(textColorModeSelection);
+        setHighlightedColumn(-1);
+      } else {
+        // variations mode
+        setHighlightedRow(-1);
+        setHighlightedColumn(textColorModeSelection);
+      }
+    }
 
     Animated.timing(colorMenuAnimation, {
       toValue: 1,
