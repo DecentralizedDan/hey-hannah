@@ -117,6 +117,18 @@ function AppContent() {
   const [highlightedRow, setHighlightedRow] = useState(-1); // -1 means no highlight
   const [highlightedColumn, setHighlightedColumn] = useState(-1); // -1 means no highlight
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
+
+  // Shade selector menu state
+  const [shadeMenuVisible, setShadeMenuVisible] = useState(false);
+  const [shadeMenuColor, setShadeMenuColor] = useState("#0000FF"); // The base color for shades
+  const [originalColorMenuState, setOriginalColorMenuState] = useState({
+    bgColorMode: "palette",
+    bgColorModeSelection: 0,
+    textColorMode: "palette",
+    textColorModeSelection: 0,
+    highlightedRow: -1,
+    highlightedColumn: -1,
+  });
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -279,6 +291,55 @@ function AppContent() {
     closeColorMenu();
   };
 
+  // Shade selector functions
+  const openShadeSelector = (color, colorIndex) => {
+    // Save current color menu state
+    setOriginalColorMenuState({
+      bgColorMode,
+      bgColorModeSelection,
+      textColorMode,
+      textColorModeSelection,
+      highlightedRow,
+      highlightedColumn,
+    });
+
+    // Set shade selector state
+    setShadeMenuColor(color);
+    setShadeMenuVisible(true);
+
+    // Generate shades and find the row containing the long-pressed color
+    const shadeGrid = generateShadesWithExistingColors(color, colorIndex);
+    let targetRow = 0;
+
+    // Find which row contains the specific color that was long-pressed
+    for (let row = 0; row < shadeGrid.length; row++) {
+      if (shadeGrid[row].includes(color)) {
+        targetRow = row;
+        break;
+      }
+    }
+
+    // Highlight the row containing the long-pressed color
+    setHighlightedRow(targetRow);
+    setHighlightedColumn(-1);
+  };
+
+  const closeShadeSelector = () => {
+    // Restore original color menu state
+    setBgColorMode(originalColorMenuState.bgColorMode);
+    setBgColorModeSelection(originalColorMenuState.bgColorModeSelection);
+    setTextColorMode(originalColorMenuState.textColorMode);
+    setTextColorModeSelection(originalColorMenuState.textColorModeSelection);
+    setHighlightedRow(originalColorMenuState.highlightedRow);
+    setHighlightedColumn(originalColorMenuState.highlightedColumn);
+
+    // Reset selected shade color
+    setSelectedShadeColor(null);
+
+    // Close shade selector
+    setShadeMenuVisible(false);
+  };
+
   const cycleAlignment = () => {
     setAlignment((prev) => (prev + 1) % ALIGNMENTS.length);
   };
@@ -296,8 +357,119 @@ function AppContent() {
     });
   };
 
+  // Helper function to generate 64 shades of a color using linear interpolation
+  const generateColorShades = (baseColor) => {
+    // Parse hex color to RGB
+    const hex = baseColor.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+
+    const shades = [];
+
+    // Generate 64 shades from darkest (near black) to lightest (near white)
+    for (let i = 0; i < 64; i++) {
+      // Calculate interpolation factor (0 to 1)
+      const t = i / 63;
+
+      // Interpolate from black (0,0,0) through base color to white (255,255,255)
+      let newR, newG, newB;
+
+      if (t <= 0.5) {
+        // First half: interpolate from black to base color
+        const factor = t * 2; // 0 to 1
+        newR = Math.round(r * factor);
+        newG = Math.round(g * factor);
+        newB = Math.round(b * factor);
+      } else {
+        // Second half: interpolate from base color to white
+        const factor = (t - 0.5) * 2; // 0 to 1
+        newR = Math.round(r + (255 - r) * factor);
+        newG = Math.round(g + (255 - g) * factor);
+        newB = Math.round(b + (255 - b) * factor);
+      }
+
+      // Convert back to hex
+      const hexR = newR.toString(16).padStart(2, "0");
+      const hexG = newG.toString(16).padStart(2, "0");
+      const hexB = newB.toString(16).padStart(2, "0");
+
+      shades.push(`#${hexR}${hexG}${hexB}`);
+    }
+
+    return shades;
+  };
+
+  // Helper function to find existing colors of the same type and integrate them into shade continuum
+  const generateShadesWithExistingColors = (baseColor, colorIndex) => {
+    // Generate base 64 shades
+    const generatedShades = generateColorShades(baseColor);
+
+    // Find all existing colors of this type (same colorIndex) from all 8 palettes
+    const existingColors = [];
+    for (let paletteIndex = 0; paletteIndex < ALL_COLORS.length; paletteIndex++) {
+      const color = ALL_COLORS[paletteIndex][colorIndex];
+      existingColors.push({
+        color: color,
+        paletteIndex: paletteIndex,
+        originalIndex: paletteIndex, // Keep track of array order for conflicts
+      });
+    }
+
+    // Calculate lightness for each existing color to position in continuum
+    const getColorLightness = (hexColor) => {
+      const hex = hexColor.replace("#", "");
+      const r = parseInt(hex.substr(0, 2), 16) / 255;
+      const g = parseInt(hex.substr(2, 2), 16) / 255;
+      const b = parseInt(hex.substr(4, 2), 16) / 255;
+      // Simple lightness calculation using relative luminance
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    };
+
+    // Sort existing colors by lightness, then by original array order for conflicts
+    existingColors.sort((a, b) => {
+      const lightnessA = getColorLightness(a.color);
+      const lightnessB = getColorLightness(b.color);
+      if (Math.abs(lightnessA - lightnessB) < 0.01) {
+        // Very similar lightness
+        return a.originalIndex - b.originalIndex; // Use array order
+      }
+      return lightnessA - lightnessB;
+    });
+
+    // Replace generated shades with existing colors at appropriate positions
+    const finalShades = [...generatedShades];
+    existingColors.forEach((existingColor) => {
+      const lightness = getColorLightness(existingColor.color);
+      // Map lightness (0-1) to position (0-63)
+      const position = Math.round(lightness * 63);
+      finalShades[position] = existingColor.color;
+    });
+
+    // Organize into 8x8 grid (8 rows of 8 shades each)
+    const shadeGrid = [];
+    for (let row = 0; row < 8; row++) {
+      const rowShades = [];
+      for (let col = 0; col < 8; col++) {
+        const index = row * 8 + col;
+        rowShades.push(finalShades[index]);
+      }
+      shadeGrid.push(rowShades);
+    }
+
+    return shadeGrid;
+  };
+
+  // State for tracking selected shade colors when in shade mode
+  const [selectedShadeColor, setSelectedShadeColor] = useState(null);
+
   // Helper functions to get current colors from new palette system
   const getCurrentBackgroundColor = () => {
+    // If in shade mode and a shade is selected, use that
+    if (shadeMenuVisible && selectedShadeColor && colorMenuType === "background") {
+      return selectedShadeColor;
+    }
+
     if (bgColorMode === "palette") {
       return ALL_COLORS[bgColorModeSelection][backgroundColorIndex];
     } else {
@@ -308,6 +480,11 @@ function AppContent() {
   };
 
   const getCurrentTextColor = () => {
+    // If in shade mode and a shade is selected, use that
+    if (shadeMenuVisible && selectedShadeColor && colorMenuType === "text") {
+      return selectedShadeColor;
+    }
+
     if (textColorMode === "palette") {
       return ALL_COLORS[textColorModeSelection][textColorIndex];
     } else {
@@ -2050,7 +2227,7 @@ function AppContent() {
       )}
 
       {/* Color selection menu */}
-      {colorMenuVisible && (
+      {(colorMenuVisible || shadeMenuVisible) && (
         <Animated.View
           style={[
             styles.colorMenuOverlay,
@@ -2075,77 +2252,164 @@ function AppContent() {
             <View style={styles.colorGrid}>
               {/* Top row: empty corner + down arrows */}
               <View style={styles.colorGridRow}>
-                {/* Empty top-left corner */}
-                <View style={styles.colorCell} />
+                {/* Exit/Back button in top-left corner */}
+                <TouchableOpacity
+                  style={[styles.colorCell, styles.exitCell]}
+                  onPress={shadeMenuVisible ? closeShadeSelector : closeColorMenu}
+                >
+                  <Text style={styles.exitText}>{shadeMenuVisible ? "←" : "×"}</Text>
+                </TouchableOpacity>
 
-                {/* Radio buttons for color variations */}
-                {COLORS.map((_, colorIndex) => (
-                  <TouchableOpacity
-                    key={`radio-column-${colorIndex}`}
-                    style={[styles.colorCell, styles.radioCell]}
-                    onPress={() => selectColorVariation(colorIndex)}
-                  >
-                    <View style={styles.radioButton}>
-                      <View
-                        style={[
-                          styles.radioButtonInner,
-                          (colorMenuType === "background" &&
-                            bgColorMode === "variations" &&
-                            bgColorModeSelection === colorIndex) ||
-                          (colorMenuType === "text" &&
-                            textColorMode === "variations" &&
-                            textColorModeSelection === colorIndex)
-                            ? styles.radioButtonSelected
-                            : null,
-                        ]}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                {/* Radio buttons for color variations or shade columns */}
+                {!shadeMenuVisible
+                  ? // Regular color variation radio buttons
+                    COLORS.map((_, colorIndex) => (
+                      <TouchableOpacity
+                        key={`radio-column-${colorIndex}`}
+                        style={[styles.colorCell, styles.radioCell]}
+                        onPress={() => selectColorVariation(colorIndex)}
+                      >
+                        <View style={styles.radioButton}>
+                          <View
+                            style={[
+                              styles.radioButtonInner,
+                              (colorMenuType === "background" &&
+                                bgColorMode === "variations" &&
+                                bgColorModeSelection === colorIndex) ||
+                              (colorMenuType === "text" &&
+                                textColorMode === "variations" &&
+                                textColorModeSelection === colorIndex)
+                                ? styles.radioButtonSelected
+                                : null,
+                            ]}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  : // Shade selector column radio buttons (8 columns)
+                    Array.from({ length: 8 }, (_, columnIndex) => (
+                      <TouchableOpacity
+                        key={`shade-column-${columnIndex}`}
+                        style={[styles.colorCell, styles.radioCell]}
+                        onPress={() => {
+                          setHighlightedColumn(columnIndex);
+                          setHighlightedRow(-1);
+                        }}
+                      >
+                        <View style={styles.radioButton}>
+                          <View
+                            style={[
+                              styles.radioButtonInner,
+                              highlightedColumn === columnIndex ? styles.radioButtonSelected : null,
+                            ]}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    ))}
               </View>
 
-              {/* 8 rows of colors with right arrows */}
-              {ALL_COLORS.map((palette, paletteIndex) => (
-                <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
-                  {/* Radio button for palette selection */}
-                  <TouchableOpacity
-                    style={[styles.colorCell, styles.radioCell]}
-                    onPress={() => selectPalette(paletteIndex)}
-                  >
-                    <View style={styles.radioButton}>
-                      <View
-                        style={[
-                          styles.radioButtonInner,
-                          (colorMenuType === "background" &&
-                            bgColorMode === "palette" &&
-                            bgColorModeSelection === paletteIndex) ||
-                          (colorMenuType === "text" &&
-                            textColorMode === "palette" &&
-                            textColorModeSelection === paletteIndex)
-                            ? styles.radioButtonSelected
-                            : null,
-                        ]}
-                      />
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* 8 colors in this palette with row highlight overlay */}
-                  <View style={styles.colorRowContainer}>
-                    {palette.map((color, colorIndex) => (
+              {/* 8 rows of colors or shades */}
+              {!shadeMenuVisible
+                ? // Regular palette rows
+                  ALL_COLORS.map((palette, paletteIndex) => (
+                    <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
+                      {/* Radio button for palette selection */}
                       <TouchableOpacity
-                        key={`color-${paletteIndex}-${colorIndex}`}
-                        style={[styles.colorCell, { backgroundColor: color }]}
-                        onPress={() => selectDirectColor(paletteIndex, colorIndex)}
-                      />
-                    ))}
+                        style={[styles.colorCell, styles.radioCell]}
+                        onPress={() => selectPalette(paletteIndex)}
+                      >
+                        <View style={styles.radioButton}>
+                          <View
+                            style={[
+                              styles.radioButtonInner,
+                              (colorMenuType === "background" &&
+                                bgColorMode === "palette" &&
+                                bgColorModeSelection === paletteIndex) ||
+                              (colorMenuType === "text" &&
+                                textColorMode === "palette" &&
+                                textColorModeSelection === paletteIndex)
+                                ? styles.radioButtonSelected
+                                : null,
+                            ]}
+                          />
+                        </View>
+                      </TouchableOpacity>
 
-                    {/* Row highlight overlay */}
-                    {highlightedRow === paletteIndex && (
-                      <View style={styles.rowHighlight} pointerEvents="none" />
-                    )}
-                  </View>
-                </View>
-              ))}
+                      {/* 8 colors in this palette with row highlight overlay */}
+                      <View style={styles.colorRowContainer}>
+                        {palette.map((color, colorIndex) => (
+                          <TouchableOpacity
+                            key={`color-${paletteIndex}-${colorIndex}`}
+                            style={[styles.colorCell, { backgroundColor: color }]}
+                            onPress={() => selectDirectColor(paletteIndex, colorIndex)}
+                            onLongPress={() => openShadeSelector(color, colorIndex)}
+                          />
+                        ))}
+
+                        {/* Row highlight overlay */}
+                        {highlightedRow === paletteIndex && (
+                          <View style={styles.rowHighlight} pointerEvents="none" />
+                        )}
+                      </View>
+                    </View>
+                  ))
+                : // Shade selector rows
+                  (() => {
+                    // Find the color index from COLORS array based on shadeMenuColor
+                    let colorIndex = 0;
+                    for (let i = 0; i < COLORS.length; i++) {
+                      // Check if any palette contains this color at this index
+                      for (let j = 0; j < ALL_COLORS.length; j++) {
+                        if (ALL_COLORS[j][i] === shadeMenuColor) {
+                          colorIndex = i;
+                          break;
+                        }
+                      }
+                    }
+
+                    const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
+
+                    return shadeGrid.map((shadeRow, rowIndex) => (
+                      <View key={`shade-row-${rowIndex}`} style={styles.colorGridRow}>
+                        {/* Radio button for shade row selection */}
+                        <TouchableOpacity
+                          style={[styles.colorCell, styles.radioCell]}
+                          onPress={() => {
+                            setHighlightedRow(rowIndex);
+                            setHighlightedColumn(-1);
+                          }}
+                        >
+                          <View style={styles.radioButton}>
+                            <View
+                              style={[
+                                styles.radioButtonInner,
+                                highlightedRow === rowIndex ? styles.radioButtonSelected : null,
+                              ]}
+                            />
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* 8 shade colors in this row with highlight overlay */}
+                        <View style={styles.colorRowContainer}>
+                          {shadeRow.map((shade, colIndex) => (
+                            <TouchableOpacity
+                              key={`shade-${rowIndex}-${colIndex}`}
+                              style={[styles.colorCell, { backgroundColor: shade }]}
+                              onPress={() => {
+                                // Update the current color with selected shade
+                                setSelectedShadeColor(shade);
+                              }}
+                            />
+                          ))}
+
+                          {/* Row highlight overlay */}
+                          {highlightedRow === rowIndex && (
+                            <View style={styles.rowHighlight} pointerEvents="none" />
+                          )}
+                        </View>
+                      </View>
+                    ));
+                  })()}
 
               {/* Column highlight overlays */}
               {highlightedColumn !== -1 && (
@@ -2637,6 +2901,16 @@ const styles = StyleSheet.create({
   },
   radioButtonSelected: {
     backgroundColor: "#FFCC02", // Golden fill when selected
+  },
+  exitCell: {
+    backgroundColor: "#000000", // Black background for exit button
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  exitText: {
+    color: "#FFFFFF", // White X text
+    fontSize: 28, // Large X size in pixels
+    fontWeight: "bold",
   },
   colorRowContainer: {
     flexDirection: "row",

@@ -1,0 +1,145 @@
+# Shade Selection Menu Feature Documentation
+
+## Overview
+The shade selection menu is an advanced color selection feature that provides users with 64 variations of any base color, organized in a smooth continuum from darkest to lightest. It extends the existing color selection menu to offer fine-grained control over color shades.
+
+## Activation
+- **Trigger**: Long press on any color square in the color selection menu
+- **Access**: Available from both palette mode and variations mode
+- **Target Colors**: Works with any of the 64 colors in the 8×8 color grid
+
+## Color Generation Algorithm
+
+### Linear Interpolation Method
+- **Approach**: RGB values vary proportionally using linear interpolation
+- **Range**: 64 shades from near-black to near-white
+- **Algorithm**: 
+  - First 32 shades: interpolate from black (0,0,0) to base color
+  - Last 32 shades: interpolate from base color to white (255,255,255)
+- **Interpolation Factor**: Calculated as `t = i / 63` for shade index i
+
+### Existing Color Integration
+- **Positioning**: Existing palette colors positioned at calculated lightness positions
+- **Lightness Calculation**: Uses relative luminance formula: `0.299*R + 0.587*G + 0.114*B`
+- **Conflict Resolution**: Colors with similar lightness values ordered by array appearance (0-7)
+- **Coverage**: All 8 variations of the selected color type included in shade continuum
+
+## Grid Organization
+
+### 8×8 Shade Grid Structure
+- **Layout**: 8 rows of 8 shades each (64 total shades)
+- **Ordering**: Organized as increasingly lighter shades from top to bottom
+- **Row Arrangement**: Darkest shades in row 1, lightest shades in row 8
+- **Column Organization**: Each column represents a lightness progression
+
+### Grid Size and Positioning
+- **Dimensions**: Full screen width, square aspect ratio
+- **Cell Size**: Perfect squares, same size as color selection menu
+- **Spacing**: No gaps between shade squares for seamless appearance
+
+## User Interface Elements
+
+### Navigation Controls
+- **Back Arrow (Top-Left)**: Returns to original color selection menu
+  - Replaces exit button (×) when in shade selector mode
+  - Restores exact original menu state and highlighting
+- **Radio Buttons (Left Side)**: Select entire shade row (8 similar lightness shades)
+  - Shows selected state with golden fill when row is active
+- **Radio Buttons (Top)**: Select shade column (8 lightness variations)
+  - Shows selected state with golden fill when column is active
+
+### Visual Feedback
+- **Initial Highlighting**: Row containing the long-pressed color is highlighted
+- **Row Highlights**: Golden border around entire row when selected
+- **Column Highlights**: Golden border around entire column when selected
+- **Real-time Updates**: Text/BG button and image update immediately with selected shade
+
+## State Management
+
+### New State Variables
+- `shadeMenuVisible`: Boolean controlling shade menu display
+- `shadeMenuColor`: Hex color value of the base color for shade generation
+- `selectedShadeColor`: Currently selected shade color
+- `originalColorMenuState`: Saved state for restoration when returning
+
+### State Preservation
+- **Original Menu State**: Complete preservation of:
+  - Background color mode and selection
+  - Text color mode and selection
+  - Highlighted row and column positions
+- **Menu Type**: Maintains same colorMenuType ("background" or "text")
+- **Selection Memory**: Remembers which specific color was long-pressed
+
+## Interaction Behaviors
+
+### Opening Shade Selector
+1. Long press any color square in color selection menu
+2. Save current color menu state
+3. Generate 64 shades of the selected color
+4. Find and highlight row containing the long-pressed color
+5. Display shade grid with back arrow
+
+### Color Selection
+- **Direct Selection**: Tap any shade square to select immediately
+- **Row Selection**: Radio button selects entire row of 8 similar shades
+- **Column Selection**: Radio button selects entire column of lightness variations
+- **Real-time Preview**: Selected shade immediately updates image and button colors
+
+### Navigation and Exit
+- **Back Navigation**: Tap back arrow to return to original color menu
+- **State Restoration**: Exact original highlighting and selection restored
+- **Color Persistence**: Selected shade remains active until new selection made
+
+## Technical Implementation
+
+### Color Calculation Functions
+- `generateColorShades(baseColor)`: Creates 64 interpolated shades
+- `generateShadesWithExistingColors(baseColor, colorIndex)`: Integrates existing palette colors
+- `getColorLightness(hexColor)`: Calculates relative luminance for positioning
+
+### Grid Rendering Logic
+- **Conditional Display**: Same overlay shows either regular palettes or shade grids
+- **Dynamic Generation**: Shade grid calculated in real-time based on selected color
+- **Radio Button Logic**: Adapts to work with both palette and shade selection modes
+
+### Animation and Transitions
+- **Smooth Transitions**: Uses existing slide-up animation from color selection menu
+- **No Additional Animations**: Maintains consistent user experience
+- **Instant Updates**: Color changes reflect immediately without delay
+
+## Design Principles
+
+### Color Harmony
+- **Smooth Progression**: Linear interpolation ensures smooth color transitions
+- **Lightness Ordering**: Consistent progression from dark to light
+- **Existing Color Integration**: Seamlessly incorporates original palette colors
+
+### User Experience
+- **Intuitive Access**: Long press is discoverable gesture for advanced functionality
+- **Consistent Interface**: Maintains same visual language as color selection menu
+- **Non-destructive**: Easy return to original state preserves user workflow
+
+### Technical Consistency
+- **Code Organization**: Integrates with existing color management system
+- **State Management**: Follows established patterns for menu state handling
+- **Performance**: Efficient real-time generation and rendering
+
+## Future Considerations
+
+### Potential Enhancements
+- **Preset Shade Patterns**: Common shade progressions (pastels, earth tones, etc.)
+- **Custom Interpolation**: Alternative color space interpolations (HSL, LAB)
+- **Shade Favorites**: Ability to bookmark frequently used shades
+- **Gradient Preview**: Visual representation of shade progression
+
+### Integration Points
+- **Gallery Integration**: Shade selections could be saved with image metadata
+- **Palette Creation**: Generate custom palettes from shade selections
+- **Export Capabilities**: Share shade grids or specific shade selections
+
+## Implementation Notes
+- Maintains backward compatibility with existing color system
+- Shade selection menu state is independent of regular color menu state
+- Real-time updates ensure immediate visual feedback
+- Memory-efficient shade generation avoids pre-computing all possible shades
+- Robust state management prevents UI inconsistencies during navigation

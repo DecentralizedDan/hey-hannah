@@ -37,17 +37,22 @@ Adding 64 new colors organized into 8 palettes of 8 colors each, plus a new UI f
 - **Menu Dismissal**: Touch anywhere outside menu to close
 
 ## Navigation Controls
-- **Right Arrows (Left Side)**: Select entire palette (horizontal row)
+- **Radio Buttons (Left Side)**: Select entire palette (horizontal row)
+  - Radio button shows selected state when current mode is "palette" and matches the row
   - Whole row highlights when clicked
   - Changes current palette for Text or BG to that row of 8 colors
   - Image updates to show corresponding color from new palette (e.g., default blue → pastel blue)
-- **Down Arrows (Top)**: Select color variation (vertical column)
+- **Radio Buttons (Top)**: Select color variation (vertical column)
+  - Radio button shows selected state when current mode is "variations" and matches the column
   - Whole column highlights when clicked
   - Changes current palette to 8 variations of selected color
   - Random color from selected column replaces current color
 - **Direct Color Selection**: Click any color directly
   - Changes current color for Text or BG to that specific color immediately
   - Updates Text/BG button and image in real-time
+- **Exit Button (Top-Left Corner)**: Close color menu
+  - Black square with white X symbol
+  - Closes color menu when tapped
 
 ## User Interaction Model
 - Users can select either:
@@ -72,14 +77,15 @@ Adding 64 new colors organized into 8 palettes of 8 colors each, plus a new UI f
   - Mode "variations" + selection 0 = all red variations (column 0)
 
 ## UI Specifications
-- **Grid Layout**: 9×9 grid (top-left position empty, arrows + 8×8 colors)
+- **Grid Layout**: 9×9 grid (top-left exit button, radio buttons + 8×8 colors)
 - **Grid Size**: Height and width equal to screen width
 - **Color Squares**: Perfect squares, touching each other
-- **Arrows**: Same size as one color square
+- **Radio Buttons**: Same size as one color square, white circle with golden fill when selected
+- **Exit Button**: Black square with white X, same size as color squares
 - **Animation**: Smooth slide up from bottom with easing
 - **Highlights**: Background highlight behind entire row/column, persists until new selection or menu close
 - **Random Selection**: Choose any color different from currently active one
-- **Visual Feedback**: Text/BG button color and image update in real-time, no additional indicators needed
+- **Visual Feedback**: Text/BG button color and image update in real-time, radio buttons show current selection state
 
 ## Additional Implementation Details
 
@@ -89,10 +95,10 @@ Adding 64 new colors organized into 8 palettes of 8 colors each, plus a new UI f
 - Random selection avoids currently active color
 
 ### Grid Layout Details
-- 9×9 total grid: empty top-left corner + 8 arrows + 64 colors
+- 9×9 total grid: exit button top-left corner + 8 radio buttons + 64 colors
 - Screen-width dimensions for full grid
 - Perfect square cells, no spacing between colors
-- Arrow cells same size as color cells
+- Radio button cells and exit button same size as color cells
 
 ### State Variables Structure
 - Text state: `textColorMode`, `textColorModeSelection`, `textColorIndex`  
@@ -101,9 +107,10 @@ Adding 64 new colors organized into 8 palettes of 8 colors each, plus a new UI f
 
 ### Interaction Behaviors
 - Long press Text/BG buttons triggers color menu
-- Touch outside menu to dismiss
+- Touch outside menu or exit button to dismiss
 - Real-time updates: button colors + image preview
 - Row/column highlights persist until new selection or menu close
+- Radio buttons show current selection state with golden fill
 - Cycling buttons use currently selected color set (8 colors)
 
 ### Animation Specifications
