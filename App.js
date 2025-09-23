@@ -54,13 +54,13 @@ const ALL_COLORS = [
   ["#FFB3B3", "#FFCCAA", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
 
   // 2: Earth tones palette
-  ["#CC6633", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#996699", "#F5F0EA", "#3D3D3D"],
+  ["#CC6633", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#8855AA", "#F5F0EA", "#3D3D3D"],
 
   // 3: Ocean palette
-  ["#FF6B6B", "#FF9F6B", "#FFD56B", "#6BFF9F", "#6BAAFF", "#9F6BFF", "#F0FDFF", "#1A3B4D"],
+  ["#FF6B6B", "#FF9F6B", "#FFD56B", "#6BFF9F", "#6BAAFF", "#9F6BFF", "#F0FDFF", "#4A4A4A"],
 
   // 4: Sunset palette
-  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#FF6B6B", "#E56B9D", "#D67AFF", "#FFF8F0", "#4D2D1A"],
+  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#FF6B6B", "#E56B9D", "#D67AFF", "#FFF8F0", "#2A2A2A"],
 
   // 5: Pure colors (highly saturated)
   ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
@@ -69,7 +69,7 @@ const ALL_COLORS = [
   ["#990033", "#CC4400", "#998800", "#004D66", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
 
   // 7: Muted palette
-  ["#AA6666", "#BB8866", "#BBAA66", "#66AA88", "#6688AA", "#8866AA", "#EEEEEE", "#444444"],
+  ["#AA6666", "#BB8866", "#BBAA66", "#66AA88", "#6688AA", "#8866AA", "#D8D8D8", "#444444"],
 ];
 
 const GOLDEN_COLOR = "#FFCC02";
@@ -2062,11 +2062,7 @@ function AppContent() {
                 {COLORS.map((_, colorIndex) => (
                   <TouchableOpacity
                     key={`down-arrow-${colorIndex}`}
-                    style={[
-                      styles.colorCell,
-                      styles.arrowCell,
-                      highlightedColumn === colorIndex && styles.highlightedCell,
-                    ]}
+                    style={[styles.colorCell, styles.arrowCell]}
                     onPress={() => selectColorVariation(colorIndex)}
                   >
                     <Text style={styles.arrowText}>↓</Text>
@@ -2079,31 +2075,43 @@ function AppContent() {
                 <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
                   {/* Right arrow for palette selection */}
                   <TouchableOpacity
-                    style={[
-                      styles.colorCell,
-                      styles.arrowCell,
-                      highlightedRow === paletteIndex && styles.highlightedCell,
-                    ]}
+                    style={[styles.colorCell, styles.arrowCell]}
                     onPress={() => selectPalette(paletteIndex)}
                   >
                     <Text style={styles.arrowText}>→</Text>
                   </TouchableOpacity>
 
-                  {/* 8 colors in this palette */}
-                  {palette.map((color, colorIndex) => (
-                    <TouchableOpacity
-                      key={`color-${paletteIndex}-${colorIndex}`}
-                      style={[
-                        styles.colorCell,
-                        { backgroundColor: color },
-                        (highlightedRow === paletteIndex || highlightedColumn === colorIndex) &&
-                          styles.highlightedCell,
-                      ]}
-                      onPress={() => selectDirectColor(paletteIndex, colorIndex)}
-                    />
-                  ))}
+                  {/* 8 colors in this palette with row highlight overlay */}
+                  <View style={styles.colorRowContainer}>
+                    {palette.map((color, colorIndex) => (
+                      <TouchableOpacity
+                        key={`color-${paletteIndex}-${colorIndex}`}
+                        style={[styles.colorCell, { backgroundColor: color }]}
+                        onPress={() => selectDirectColor(paletteIndex, colorIndex)}
+                      />
+                    ))}
+
+                    {/* Row highlight overlay */}
+                    {highlightedRow === paletteIndex && (
+                      <View style={styles.rowHighlight} pointerEvents="none" />
+                    )}
+                  </View>
                 </View>
               ))}
+
+              {/* Column highlight overlays */}
+              {highlightedColumn !== -1 && (
+                <View style={styles.columnHighlightContainer} pointerEvents="none">
+                  <View
+                    style={[
+                      styles.columnHighlight,
+                      {
+                        left: (Dimensions.get("window").width / 9) * (highlightedColumn + 1), // Skip first column (arrows) in pixels
+                      },
+                    ]}
+                  />
+                </View>
+              )}
             </View>
           </View>
         </Animated.View>
@@ -2568,10 +2576,38 @@ const styles = StyleSheet.create({
     fontSize: 24, // Arrow size in pixels
     fontWeight: "bold",
   },
-  highlightedCell: {
-    backgroundColor: "rgba(255, 204, 2, 0.3)", // Golden highlight with transparency
-    borderColor: "#FFCC02", // Golden border
-    borderWidth: 2, // Thicker border for highlight in pixels
+  colorRowContainer: {
+    flexDirection: "row",
+    flex: 8, // Takes up 8 units of the 9-unit row (excluding arrow)
+    position: "relative",
+  },
+  rowHighlight: {
+    position: "absolute",
+    top: -2, // Extend outside the row in pixels
+    left: -2, // Extend outside the row in pixels
+    right: -2, // Extend outside the row in pixels
+    bottom: -2, // Extend outside the row in pixels
+    borderWidth: 3, // Thick golden border in pixels
+    borderColor: "#FFCC02", // Golden highlight color
+    backgroundColor: "transparent", // Transparent background
+    pointerEvents: "none", // Don't interfere with touches
+  },
+  columnHighlightContainer: {
+    position: "absolute",
+    top: Dimensions.get("window").width / 9, // Start after the arrow row in pixels
+    left: 0,
+    right: 0,
+    height: Dimensions.get("window").width * (8 / 9), // Height of 8 color rows in pixels
+    pointerEvents: "none",
+  },
+  columnHighlight: {
+    position: "absolute",
+    top: -2, // Extend above column in pixels
+    bottom: -2, // Extend below column in pixels
+    width: Dimensions.get("window").width / 9 + 4, // Column width plus border extension in pixels
+    borderWidth: 3, // Thick golden border in pixels
+    borderColor: "#FFCC02", // Golden highlight color
+    backgroundColor: "transparent", // Transparent background
   },
 });
 
