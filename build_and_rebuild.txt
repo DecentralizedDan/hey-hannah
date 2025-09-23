@@ -1,0 +1,267 @@
+BUILD AND REBUILD OPTIONS FOR HEY HANNAH
+
+OVERVIEW
+This document outlines various methods for cleaning and rebuilding the Hey Hannah React Native app to resolve build issues, clear caches, and ensure fresh builds.
+
+QUICK CLEAN AND REBUILD (MOST COMMON)
+
+Method 1: Basic Clean Build
+npx react-native start --reset-cache
+
+Then in a new terminal:
+npx react-native run-ios
+
+Method 2: Metro Cache Reset
+npx react-native start --reset-cache
+OR
+yarn start --reset-cache
+
+IOS SPECIFIC CLEANING
+
+Method 3: Xcode Clean Build
+1. Open project in Xcode
+2. Product → Clean Build Folder (⌘+Shift+K)
+3. Close Xcode
+4. Run from terminal:
+   npx react-native run-ios
+
+Method 4: iOS Build Directory Clean
+rm -rf build
+rm -rf DerivedData
+cd ..
+npx react-native run-ios
+
+Method 5: Comprehensive iOS Clean
+Clean iOS build artifacts:
+rm -rf ios/build
+rm -rf ios/Pods
+rm -rf ios/Podfile.lock
+
+Reinstall pods:
+cd ios
+pod install
+cd ..
+
+Run app:
+npx react-native run-ios
+
+NODE MODULES AND DEPENDENCIES
+
+Method 6: Node Modules Reset
+rm -rf node_modules
+rm package-lock.json
+npm install
+OR if using yarn:
+yarn install
+
+Method 7: Complete Dependency Refresh
+Remove all cached dependencies:
+rm -rf node_modules
+rm package-lock.json
+rm -rf ios/Pods
+rm ios/Podfile.lock
+
+Reinstall everything:
+npm install
+cd ios
+pod install
+cd ..
+
+Start fresh:
+npx react-native run-ios
+
+CACHE CLEARING OPTIONS
+
+Method 8: Metro and Watchman Cache Clear
+Clear Metro cache:
+npx react-native start --reset-cache
+
+Clear Watchman cache (if installed):
+watchman watch-del-all
+
+Clear npm cache:
+npm cache clean --force
+
+Method 9: System-Wide React Native Cache Clear
+Clear React Native cache:
+npx react-native start --reset-cache
+
+Clear Metro cache directory:
+rm -rf $TMPDIR/metro-*
+
+Clear Haste cache:
+rm -rf $TMPDIR/haste-map-*
+
+Clear React Native temp files:
+rm -rf $TMPDIR/react-*
+
+NUCLEAR OPTION (COMPLETE RESET)
+
+Method 10: Full Clean Slate
+Remove all build artifacts and dependencies:
+rm -rf node_modules
+rm -rf ios/build
+rm -rf ios/Pods
+rm -rf ios/DerivedData
+rm package-lock.json
+rm ios/Podfile.lock
+
+Clear all caches:
+npm cache clean --force
+watchman watch-del-all
+rm -rf $TMPDIR/metro-*
+rm -rf $TMPDIR/haste-map-*
+rm -rf $TMPDIR/react-*
+
+Reinstall everything:
+npm install
+cd ios
+pod install
+cd ..
+
+Start completely fresh:
+npx react-native run-ios
+
+DEVELOPMENT SERVER MANAGEMENT
+
+Method 11: Kill All React Native Processes
+Kill all Node processes (includes Metro bundler):
+killall node
+
+Kill all React Native processes:
+pkill -f "react-native"
+
+Kill specific ports if blocked:
+lsof -ti:8081 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
+
+Method 12: Restart Development Server
+Stop any running Metro bundler (Ctrl+C)
+Then restart with cache reset:
+npx react-native start --reset-cache --verbose
+
+DEBUGGING SPECIFIC ISSUES
+
+For dSYM Warnings (Debug Symbol Issues)
+Clean Xcode derived data:
+rm -rf ~/Library/Developer/Xcode/DerivedData/HeyHannah-*
+
+Clean and rebuild in Xcode:
+Product → Clean Build Folder
+Product → Build
+
+For CocoaPods Issues
+Update CocoaPods:
+pod repo update
+pod install --repo-update
+
+Or force clean install:
+rm -rf Pods
+rm Podfile.lock
+pod install
+
+For Font Loading Issues
+Clear font cache and reinstall:
+rm -rf node_modules/@expo-google-fonts
+npm install
+cd ios
+pod install
+cd ..
+npx react-native run-ios
+
+BUILD CONFIGURATION TIPS
+
+Debug vs Release Builds
+Debug build (default):
+npx react-native run-ios
+
+Release build for testing:
+npx react-native run-ios --configuration Release
+
+Specific simulator:
+npx react-native run-ios --simulator="iPhone 14 Pro"
+
+EAS Build Preparation
+Ensure clean state before EAS build:
+npm install
+cd ios
+pod install
+cd ..
+
+Test local build first:
+npx react-native run-ios --configuration Release
+
+WHEN TO USE EACH METHOD
+
+Use Method 1-2 for:
+- General development issues
+- Metro bundler problems
+- Cache-related errors
+
+Use Method 3-5 for:
+- iOS-specific build failures
+- Xcode compilation errors
+- dSYM warnings
+
+Use Method 6-7 for:
+- Dependency conflicts
+- Package installation issues
+- Version mismatches
+
+Use Method 8-9 for:
+- Persistent cache issues
+- Hot reload problems
+- File watching errors
+
+Use Method 10 for:
+- Complete environment corruption
+- When nothing else works
+- Starting fresh after major changes
+
+Use Method 11-12 for:
+- Port conflicts
+- Development server issues
+- Process hanging problems
+
+PREVENTIVE MEASURES
+
+Regular Maintenance
+Weekly cleanup routine:
+npm cache clean --force
+npx react-native start --reset-cache
+
+Before Major Changes
+Clean state before big updates:
+rm -rf node_modules
+npm install
+cd ios
+pod install
+cd ..
+
+Before Production Builds
+Ensure clean production build:
+rm -rf node_modules
+rm -rf ios/build
+npm install
+cd ios
+pod install
+cd ..
+npx react-native run-ios --configuration Release
+
+TROUBLESHOOTING ORDER
+
+When facing build issues, try methods in this order:
+1. Method 1 (Basic clean build)
+2. Method 3 (Xcode clean)
+3. Method 6 (Node modules reset)
+4. Method 8 (Cache clearing)
+5. Method 10 (Nuclear option)
+
+NOTES
+
+- Always ensure you're in the correct project directory before running commands
+- Close Xcode before deleting iOS build files
+- Stop the Metro bundler (Ctrl+C) before running clean commands
+- Some operations may take several minutes, especially dependency reinstallation
+- Always test the app after major cleaning operations
+- Keep the Metro bundler terminal open during development for easier debugging
