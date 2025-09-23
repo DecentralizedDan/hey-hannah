@@ -303,6 +303,9 @@ function AppContent() {
       highlightedColumn,
     });
 
+    // First close the regular color menu
+    setColorMenuVisible(false);
+
     // Set shade selector state
     setShadeMenuColor(color);
     setShadeMenuVisible(true);
@@ -336,8 +339,9 @@ function AppContent() {
     // Reset selected shade color
     setSelectedShadeColor(null);
 
-    // Close shade selector
+    // Close shade selector and restore color menu
     setShadeMenuVisible(false);
+    setColorMenuVisible(true);
   };
 
   const cycleAlignment = () => {
@@ -2243,7 +2247,9 @@ function AppContent() {
             },
           ]}
         >
-          <TouchableWithoutFeedback onPress={closeColorMenu}>
+          <TouchableWithoutFeedback
+            onPress={shadeMenuVisible ? closeShadeSelector : closeColorMenu}
+          >
             <View style={styles.colorMenuBackground} />
           </TouchableWithoutFeedback>
 
