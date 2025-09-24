@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  StyleSheet,
   Text,
   View,
   TextInput,
@@ -29,143 +28,25 @@ import { Courgette_400Regular } from "@expo-google-fonts/courgette";
 import { PermanentMarker_400Regular } from "@expo-google-fonts/permanent-marker";
 import { BlackOpsOne_400Regular } from "@expo-google-fonts/black-ops-one";
 import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
-// Using FileSystem for simple JSON storage
 
-/**
- * Generates a meaningful filename based on text content with date and time
- * @param {string} text - The text content to base the filename on
- * @param {Array} existingFilenames - Array of existing filenames to avoid duplicates
- * @returns {string} - Generated filename with .jpg extension
- */
-const generateFilename = (text, existingFilenames = []) => {
-  // Generate date string in DD-MM-YYYY format
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, "0"); // Day in DD format
-  const month = String(now.getMonth() + 1).padStart(2, "0"); // Month in MM format
-  const year = now.getFullYear(); // Year in YYYY format
-  const dateString = `${day}-${month}-${year}`;
+// Import extracted modules
+import { COLORS, COLOR_VALUES, ALL_COLORS, GOLDEN_COLOR, ALIGNMENTS } from "./constants/colors";
+import { FONT_FAMILIES } from "./constants/fonts";
+import { generateFilename, saveImageForSharing } from "./utils/fileUtils";
+import { generateColorShades, generateShadesWithExistingColors } from "./utils/colorUtils";
+import { useColorManagement } from "./hooks/useColorManagement";
+import { useGalleryManagement } from "./hooks/useGalleryManagement";
+import styles from "./styles/AppStyles";
 
-  if (!text || text.trim() === "") {
-    const timestamp = Date.now();
-    return `text-image-${timestamp}-${dateString}.jpg`;
-  }
-
-  // Clean and process the text for filename
-  let cleanText = text
-    .trim()
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "") // Remove special characters except spaces and hyphens
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .substring(0, 40); // Limit to 40 characters to leave room for date
-
-  // If after cleaning we have no valid characters, fall back to timestamp
-  if (cleanText === "") {
-    const timestamp = Date.now();
-    return `text-image-${timestamp}-${dateString}.jpg`;
-  }
-
-  let baseFilename = `${cleanText}-${dateString}`;
-  let filename = `${baseFilename}.jpg`;
-  let counter = 2; // Start counter at 2 for duplicates (first duplicate is the 2nd file)
-
-  // Check for duplicates and add incremental number if needed
-  while (existingFilenames.includes(filename)) {
-    filename = `${cleanText}-${dateString}-${counter}.jpg`;
-    counter++;
-  }
-
-  return filename;
-};
-
-/**
- * Saves a captured image with a meaningful filename for sharing
- * @param {string} capturedUri - The URI of the captured image
- * @param {string} text - The text content to base the filename on
- * @param {Array} existingFilenames - Array of existing filenames to avoid duplicates
- * @returns {string} - Path to the saved file with meaningful filename
- */
-const saveImageForSharing = async (capturedUri, text, existingFilenames = []) => {
-  try {
-    const meaningfulFilename = generateFilename(text, existingFilenames);
-    const shareDir = FileSystem.cacheDirectory + "share/";
-
-    // Ensure share directory exists
-    const dirInfo = await FileSystem.getInfoAsync(shareDir);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(shareDir, { intermediates: true });
-    }
-
-    const finalPath = shareDir + meaningfulFilename;
-
-    // Copy the captured image to the new location with meaningful filename
-    await FileSystem.copyAsync({
-      from: capturedUri,
-      to: finalPath,
-    });
-
-    return finalPath;
-  } catch (error) {
-    console.error("Error saving image for sharing:", error);
-    return capturedUri; // Fall back to original URI
-  }
-};
-
-const COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "white", "black"];
-
-// Legacy COLOR_VALUES for backward compatibility
-const COLOR_VALUES = {
-  white: "#FFFFFF",
-  black: "#000000",
-  red: "#FF0000",
-  blue: "#0000FF",
-  green: "#00FF00",
-  yellow: "#FFFF00",
-  purple: "#800080",
-  orange: "#FFA500",
-};
-
-// All 64 colors organized into 8 palettes of 8 colors each
-const ALL_COLORS = [
-  // 0: Default palette (improved versions of current colors)
-  ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
-
-  // 1: Pastel palette
-  ["#FFB3B3", "#FFB380", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
-
-  // 2: Earth tones palette
-  ["#D85555", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#8855AA", "#F5F0EA", "#3D3D3D"],
-
-  // 3: Ocean palette
-  ["#FF6B6B", "#FF9F6B", "#FFD56B", "#6BFF9F", "#6BAAFF", "#9F6BFF", "#F0FDFF", "#4A4A4A"],
-
-  // 4: Sunset palette
-  ["#FF4D6D", "#FF8A5C", "#FFD93D", "#8CFF6B", "#6B9DFF", "#D67AFF", "#FFF8F0", "#2A2A2A"],
-
-  // 5: Pure colors (highly saturated)
-  ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
-
-  // 6: Jewel tones palette
-  ["#990033", "#CC4400", "#998800", "#006600", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
-
-  // 7: Toxic/Garish palette
-  ["#FF0080", "#FF6600", "#CCFF00", "#00FF40", "#0080FF", "#8000FF", "#FFFFFF", "#000000"],
-];
-
-const GOLDEN_COLOR = "#FFCC02";
-
-const ALIGNMENTS = ["left", "center", "right"];
-
-const FONT_FAMILIES = [
-  "System", // Default system font
-  "Courier", // Built-in monospace font available on both iOS and Android
-  "Times New Roman", // Classic serif font available on both iOS and Android
-  "Helvetica-Bold", // Bold weight of classic Helvetica font
-  "Impact", // Strong condensed font for maximum impact
-  "Courgette_400Regular", // Casual script with rounded characters
-  "PermanentMarker_400Regular", // Bold marker-style font for creative impact
-  "BlackOpsOne_400Regular", // Military stencil style, very bold and strong
-  "Quicksand_400Regular", // Modern rounded font, friendly like Comic Sans
-];
+// Import UI components
+import ColorMenu from "./components/ColorMenu";
+import GalleryView from "./components/GalleryView";
+import PreviewOverlay from "./components/PreviewOverlay";
+import DeleteModal from "./components/DeleteModal";
+import ShareModal from "./components/ShareModal";
+import TopControls from "./components/TopControls";
+import NavigationBar from "./components/NavigationBar";
+import TextEditor from "./components/TextEditor";
 
 function AppContent() {
   const insets = useSafeAreaInsets();
@@ -179,35 +60,56 @@ function AppContent() {
     Quicksand_400Regular,
   });
 
+  // Use custom hooks
+  const {
+    bgColorMode,
+    setBgColorMode,
+    bgColorModeSelection,
+    setBgColorModeSelection,
+    textColorMode,
+    setTextColorMode,
+    textColorModeSelection,
+    setTextColorModeSelection,
+    colorMenuVisible,
+    setColorMenuVisible,
+    colorMenuType,
+    setColorMenuType,
+    highlightedRow,
+    setHighlightedRow,
+    highlightedColumn,
+    setHighlightedColumn,
+    shadeMenuVisible,
+    setShadeMenuVisible,
+    shadeMenuColor,
+    setShadeMenuColor,
+    originalColorMenuState,
+    setOriginalColorMenuState,
+    selectedShadeColor,
+    setSelectedShadeColor,
+    selectedShadeType,
+    setSelectedShadeType,
+    getCurrentBackgroundColor,
+    getCurrentTextColor,
+  } = useColorManagement();
+
+  const {
+    galleryImages,
+    setGalleryImages,
+    activeImageId,
+    setActiveImageId,
+    gallerySortMode,
+    toggleGallerySortMode,
+    getSortedGalleryImages,
+    deleteImageFromGallery,
+    toggleFavoriteImage,
+  } = useGalleryManagement();
+
   const [text, setText] = useState("");
   const [backgroundColorIndex, setBackgroundColorIndex] = useState(2); // default yellow background
   const [textColorIndex, setTextColorIndex] = useState(4); // default blue text
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
 
-  // Color palette state management
-  const [bgColorMode, setBgColorMode] = useState("palette"); // "palette" or "variations"
-  const [bgColorModeSelection, setBgColorModeSelection] = useState(0); // 0-7 (palette or variation index)
-  const [textColorMode, setTextColorMode] = useState("palette"); // "palette" or "variations"
-  const [textColorModeSelection, setTextColorModeSelection] = useState(6); // 0-7 (palette or variation index)
-
-  // Color selection menu state
-  const [colorMenuVisible, setColorMenuVisible] = useState(false);
-  const [colorMenuType, setColorMenuType] = useState("background"); // "background" or "text"
-  const [highlightedRow, setHighlightedRow] = useState(-1); // -1 means no highlight
-  const [highlightedColumn, setHighlightedColumn] = useState(-1); // -1 means no highlight
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
-
-  // Shade selector menu state
-  const [shadeMenuVisible, setShadeMenuVisible] = useState(false);
-  const [shadeMenuColor, setShadeMenuColor] = useState("#0000FF"); // The base color for shades
-  const [originalColorMenuState, setOriginalColorMenuState] = useState({
-    bgColorMode: "palette",
-    bgColorModeSelection: 0,
-    textColorMode: "palette",
-    textColorModeSelection: 6,
-    highlightedRow: -1,
-    highlightedColumn: -1,
-  });
   const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -215,13 +117,10 @@ function AppContent() {
   const [startedWriting, setStartedWriting] = useState(false);
   const [fontFamily, setFontFamily] = useState(0); // 0=default, 1=monospace
   const [currentView, setCurrentView] = useState("create"); // 'create' or 'gallery'
-  const [galleryImages, setGalleryImages] = useState([]);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
   const [imageToShare, setImageToShare] = useState(null);
-  const [activeImageId, setActiveImageId] = useState(null); // Track which gallery image is currently being edited
-  const [gallerySortMode, setGallerySortMode] = useState("newest");
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'favorites', 'random'
   const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
   const [isHoldingPreview, setIsHoldingPreview] = useState(false); // Track if preview button is being held
@@ -262,10 +161,16 @@ function AppContent() {
 
   const cycleBackgroundColor = () => {
     setBackgroundColorIndex((prev) => (prev + 1) % COLORS.length);
+    // Reset shade selection when cycling colors
+    setSelectedShadeColor(null);
+    setSelectedShadeType(null);
   };
 
   const cycleTextColor = () => {
     setTextColorIndex((prev) => (prev + 1) % COLORS.length);
+    // Reset shade selection when cycling colors
+    setSelectedShadeColor(null);
+    setSelectedShadeType(null);
   };
 
   // Color menu functions
@@ -330,6 +235,9 @@ function AppContent() {
     }
     setHighlightedRow(paletteIndex);
     setHighlightedColumn(-1);
+    // Reset shade selection when selecting a new palette
+    setSelectedShadeColor(null);
+    setSelectedShadeType(null);
   };
 
   const selectColorVariation = (colorIndex) => {
@@ -356,6 +264,9 @@ function AppContent() {
     }
     setHighlightedColumn(colorIndex);
     setHighlightedRow(-1);
+    // Reset shade selection when selecting a new color variation
+    setSelectedShadeColor(null);
+    setSelectedShadeType(null);
   };
 
   const selectDirectColor = (paletteIndex, colorIndex) => {
@@ -370,6 +281,9 @@ function AppContent() {
     }
     setHighlightedRow(-1);
     setHighlightedColumn(-1);
+    // Reset shade selection when selecting a new color
+    setSelectedShadeColor(null);
+    setSelectedShadeType(null);
     closeColorMenu();
   };
 
@@ -409,6 +323,13 @@ function AppContent() {
     setHighlightedColumn(-1);
   };
 
+  const dismissShadeSelector = () => {
+    // Just close the shade menu and return to color menu, keeping the selected shade
+    setShadeMenuVisible(false);
+    setColorMenuVisible(true);
+    // Keep highlighting and selected shade intact
+  };
+
   const closeShadeSelector = () => {
     // Restore original color menu state
     setBgColorMode(originalColorMenuState.bgColorMode);
@@ -420,6 +341,7 @@ function AppContent() {
 
     // Reset selected shade color
     setSelectedShadeColor(null);
+    setSelectedShadeType(null);
 
     // Close shade selector and restore color menu
     setShadeMenuVisible(false);
@@ -434,185 +356,11 @@ function AppContent() {
     setFontFamily((prev) => (prev + 1) % FONT_FAMILIES.length);
   };
 
-  const toggleGallerySortMode = () => {
-    setGallerySortMode((prev) => {
-      if (prev === "newest") return "favorites";
-      if (prev === "favorites") return "oldest";
-      if (prev === "oldest") return "random";
-      return "newest"; // from random back to newest
-    });
-  };
-
-  // Helper function to generate 64 shades of a color using linear interpolation
-  const generateColorShades = (baseColor) => {
-    // Parse hex color to RGB
-    const hex = baseColor.replace("#", "");
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-
-    const shades = [];
-
-    // Generate 64 shades from darkest (near black) to lightest (near white)
-    for (let i = 0; i < 64; i++) {
-      // Calculate interpolation factor (0 to 1)
-      const t = i / 63;
-
-      // Interpolate from black (0,0,0) through base color to white (255,255,255)
-      let newR, newG, newB;
-
-      if (t <= 0.5) {
-        // First half: interpolate from black to base color
-        const factor = t * 2; // 0 to 1
-        newR = Math.round(r * factor);
-        newG = Math.round(g * factor);
-        newB = Math.round(b * factor);
-      } else {
-        // Second half: interpolate from base color to white
-        const factor = (t - 0.5) * 2; // 0 to 1
-        newR = Math.round(r + (255 - r) * factor);
-        newG = Math.round(g + (255 - g) * factor);
-        newB = Math.round(b + (255 - b) * factor);
-      }
-
-      // Convert back to hex
-      const hexR = newR.toString(16).padStart(2, "0");
-      const hexG = newG.toString(16).padStart(2, "0");
-      const hexB = newB.toString(16).padStart(2, "0");
-
-      shades.push(`#${hexR}${hexG}${hexB}`);
-    }
-
-    return shades;
-  };
-
-  // Helper function to find existing colors of the same type and integrate them into shade continuum
-  const generateShadesWithExistingColors = (baseColor, colorIndex) => {
-    // Generate base 64 shades
-    const generatedShades = generateColorShades(baseColor);
-
-    // Find all existing colors of this type (same colorIndex) from all 8 palettes
-    const existingColors = [];
-    for (let paletteIndex = 0; paletteIndex < ALL_COLORS.length; paletteIndex++) {
-      const color = ALL_COLORS[paletteIndex][colorIndex];
-      existingColors.push({
-        color: color,
-        paletteIndex: paletteIndex,
-        originalIndex: paletteIndex, // Keep track of array order for conflicts
-      });
-    }
-
-    // Calculate lightness for each existing color to position in continuum
-    const getColorLightness = (hexColor) => {
-      const hex = hexColor.replace("#", "");
-      const r = parseInt(hex.substr(0, 2), 16) / 255;
-      const g = parseInt(hex.substr(2, 2), 16) / 255;
-      const b = parseInt(hex.substr(4, 2), 16) / 255;
-      // Simple lightness calculation using relative luminance
-      return 0.299 * r + 0.587 * g + 0.114 * b;
-    };
-
-    // Sort existing colors by lightness, then by original array order for conflicts
-    existingColors.sort((a, b) => {
-      const lightnessA = getColorLightness(a.color);
-      const lightnessB = getColorLightness(b.color);
-      if (Math.abs(lightnessA - lightnessB) < 0.01) {
-        // Very similar lightness
-        return a.originalIndex - b.originalIndex; // Use array order
-      }
-      return lightnessA - lightnessB;
-    });
-
-    // Replace generated shades with existing colors at appropriate positions
-    const finalShades = [...generatedShades];
-    existingColors.forEach((existingColor) => {
-      const lightness = getColorLightness(existingColor.color);
-      // Map lightness (0-1) to position (0-63)
-      const position = Math.round(lightness * 63);
-      finalShades[position] = existingColor.color;
-    });
-
-    // Organize into 8x8 grid (8 rows of 8 shades each)
-    const shadeGrid = [];
-    for (let row = 0; row < 8; row++) {
-      const rowShades = [];
-      for (let col = 0; col < 8; col++) {
-        const index = row * 8 + col;
-        rowShades.push(finalShades[index]);
-      }
-      shadeGrid.push(rowShades);
-    }
-
-    return shadeGrid;
-  };
-
-  // State for tracking selected shade colors when in shade mode
-  const [selectedShadeColor, setSelectedShadeColor] = useState(null);
-
-  // Helper functions to get current colors from new palette system
-  const getCurrentBackgroundColor = () => {
-    // If in shade mode and a shade is selected, use that
-    if (shadeMenuVisible && selectedShadeColor && colorMenuType === "background") {
-      return selectedShadeColor;
-    }
-
-    if (bgColorMode === "palette") {
-      return ALL_COLORS[bgColorModeSelection][backgroundColorIndex];
-    } else {
-      // variations mode - bgColorModeSelection is the color type (0=red, 1=orange, etc.)
-      // backgroundColorIndex is the palette index (0-7)
-      return ALL_COLORS[backgroundColorIndex][bgColorModeSelection];
-    }
-  };
-
-  const getCurrentTextColor = () => {
-    // If in shade mode and a shade is selected, use that
-    if (shadeMenuVisible && selectedShadeColor && colorMenuType === "text") {
-      return selectedShadeColor;
-    }
-
-    if (textColorMode === "palette") {
-      return ALL_COLORS[textColorModeSelection][textColorIndex];
-    } else {
-      // variations mode - textColorModeSelection is the color type (0=red, 1=orange, etc.)
-      // textColorIndex is the palette index (0-7)
-      return ALL_COLORS[textColorIndex][textColorModeSelection];
-    }
-  };
-
   const currentAlignment = ALIGNMENTS[alignment];
-  const currentBackgroundColor = getCurrentBackgroundColor();
+  const currentBackgroundColor = getCurrentBackgroundColor(backgroundColorIndex);
   const currentFontFamily =
     FONT_FAMILIES[fontFamily] === "System" ? undefined : FONT_FAMILIES[fontFamily];
-  const currentTextColor = getCurrentTextColor();
-
-  // Create sorted gallery images based on current sort mode
-  const getSortedGalleryImages = () => {
-    const imagesCopy = [...galleryImages];
-
-    switch (gallerySortMode) {
-      case "oldest":
-        return imagesCopy.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-      case "favorites":
-        return imagesCopy.sort((a, b) => {
-          // First sort by favorite status (favorites first)
-          if (a.isFavorited && !b.isFavorited) return -1;
-          if (!a.isFavorited && b.isFavorited) return 1;
-          // Then by newest for items with same favorite status
-          return new Date(b.createdAt) - new Date(a.createdAt);
-        });
-      case "random":
-        // Fisher-Yates shuffle algorithm
-        for (let i = imagesCopy.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [imagesCopy[i], imagesCopy[j]] = [imagesCopy[j], imagesCopy[i]];
-        }
-        return imagesCopy;
-      case "newest":
-      default:
-        return imagesCopy.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
-  };
+  const currentTextColor = getCurrentTextColor(textColorIndex);
 
   const sortedGalleryImages = getSortedGalleryImages();
 
@@ -817,23 +565,6 @@ function AppContent() {
     setText(deletedText);
     setDeletedText("");
     setShowUndo(false);
-  };
-
-  // Gallery functions
-  const loadGalleryImages = async () => {
-    try {
-      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
-      const fileInfo = await FileSystem.getInfoAsync(galleryMetadataPath);
-      if (fileInfo.exists) {
-        const galleryData = await FileSystem.readAsStringAsync(galleryMetadataPath);
-        const images = JSON.parse(galleryData);
-        // Sort by creation date descending (newest first)
-        const sortedImages = images.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setGalleryImages(sortedImages);
-      }
-    } catch (error) {
-      if (__DEV__) console.error("Failed to load gallery:", error);
-    }
   };
 
   const createNewImage = async (uri, galleryDir) => {
@@ -1120,49 +851,6 @@ function AppContent() {
     }
   };
 
-  const deleteImageFromGallery = async (imageId) => {
-    try {
-      // Find the image to delete
-      const imageToDelete = galleryImages.find((img) => img.id === imageId);
-      if (!imageToDelete) return;
-
-      // Delete the image file
-      const fileInfo = await FileSystem.getInfoAsync(imageToDelete.path);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(imageToDelete.path);
-      }
-
-      // Update gallery list
-      const updatedImages = galleryImages.filter((img) => img.id !== imageId);
-      setGalleryImages(updatedImages);
-
-      // If we deleted the currently active image, clear the activeImageId and reset to blank state
-      if (activeImageId === imageId) {
-        setActiveImageId(null);
-        setText("");
-        setBackgroundColorIndex(5); // default yellow background
-        setTextColorIndex(3); // default blue text
-        setAlignment(0); // left alignment
-        setFontFamily(0); // default font
-        setFontSize(baseSize);
-        setPreviewHeight(400); // default height in pixels
-        setStartedWriting(false);
-        setIsPreviewMode(false);
-      }
-
-      // Save updated list to FileSystem
-      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
-      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(updatedImages));
-
-      // Close modal
-      setDeleteModalVisible(false);
-      setImageToDelete(null);
-    } catch (error) {
-      if (__DEV__) console.error("Failed to delete image:", error);
-      Alert.alert("Error", "Failed to delete image.");
-    }
-  };
-
   const confirmDelete = (image) => {
     setImageToDelete(image);
     setDeleteModalVisible(true);
@@ -1219,27 +907,6 @@ function AppContent() {
     } catch (error) {
       if (__DEV__) console.error("Failed to duplicate image:", error);
       Alert.alert("Error", "Failed to duplicate image.");
-    }
-  };
-
-  const toggleFavoriteImage = async (imageId) => {
-    try {
-      // Find and update the image
-      const updatedImages = galleryImages.map((img) => {
-        if (img.id === imageId) {
-          return { ...img, isFavorited: !img.isFavorited };
-        }
-        return img;
-      });
-
-      setGalleryImages(updatedImages);
-
-      // Save updated list to FileSystem
-      const galleryMetadataPath = FileSystem.documentDirectory + "gallery/metadata.json";
-      await FileSystem.writeAsStringAsync(galleryMetadataPath, JSON.stringify(updatedImages));
-    } catch (error) {
-      if (__DEV__) console.error("Failed to toggle favorite:", error);
-      Alert.alert("Error", "Failed to update favorite status.");
     }
   };
 
@@ -1425,11 +1092,6 @@ function AppContent() {
       }
     );
   };
-
-  // Load gallery on component mount
-  useEffect(() => {
-    loadGalleryImages();
-  }, []);
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -1726,148 +1388,44 @@ function AppContent() {
             </View>
 
             {/* Navigation elements */}
-            {!isPreviewMode && currentView === "create" && (
-              <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-                <TouchableOpacity onPress={handleGalleryView}>
-                  <Text style={styles.navigationText}>Gallery</Text>
-                </TouchableOpacity>
-                {startedWriting && text.trim() && !showUndo && (
-                  <Pressable
-                    onPress={handleNewImage}
-                    onPressIn={handleNewPressIn}
-                    onPressOut={handleNewPressOut}
-                  >
-                    <Text
-                      style={[
-                        styles.navigationText,
-                        {
-                          backgroundColor: isHoldingNew ? "rgba(255, 204, 2, 0.2)" : "transparent",
-                        },
-                      ]}
-                    >
-                      New
-                    </Text>
-                  </Pressable>
-                )}
-                {showUndo && (
-                  <TouchableOpacity onPress={handleUndo}>
-                    <Text style={styles.navigationText}>Undo</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {!isPreviewMode && currentView === "gallery" && (
-              <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-                <TouchableOpacity onPress={toggleGallerySortMode}>
-                  <Text style={styles.navigationText}>
-                    {gallerySortMode === "newest"
-                      ? "Newest"
-                      : gallerySortMode === "oldest"
-                      ? "Oldest"
-                      : gallerySortMode === "favorites"
-                      ? "Favorites"
-                      : "Random"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleEditView}>
-                  <Text style={styles.navigationText}>{activeImageId ? "Edit" : "New"}</Text>
-                </TouchableOpacity>
-              </View>
+            {!isPreviewMode && (
+              <NavigationBar
+                currentView={currentView}
+                insets={insets}
+                startedWriting={startedWriting}
+                text={text}
+                showUndo={showUndo}
+                activeImageId={activeImageId}
+                gallerySortMode={gallerySortMode}
+                isHoldingNew={isHoldingNew}
+                onGalleryView={handleGalleryView}
+                onNewImage={handleNewImage}
+                onNewPressIn={handleNewPressIn}
+                onNewPressOut={handleNewPressOut}
+                onUndo={handleUndo}
+                onToggleGallerySortMode={toggleGallerySortMode}
+                onEditView={handleEditView}
+              />
             )}
 
             {/* Controls at top */}
             {!isPreviewMode && currentView === "create" && (
-              <View style={[styles.topControlsContainer, { paddingTop: 20 }]}>
-                {/* Background color control */}
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={cycleBackgroundColor}
-                  onLongPress={() => openColorMenu("background")}
-                >
-                  <View
-                    style={[
-                      styles.colorCircle,
-                      {
-                        backgroundColor: currentBackgroundColor,
-                        borderColor: "#FFFFFF",
-                      },
-                    ]}
-                  />
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>BG</Text>
-                </TouchableOpacity>
-
-                {/* Text color control */}
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={cycleTextColor}
-                  onLongPress={() => openColorMenu("text")}
-                >
-                  <View
-                    style={[
-                      styles.colorCircle,
-                      {
-                        backgroundColor: currentTextColor,
-                        borderColor: "#FFFFFF",
-                      },
-                    ]}
-                  />
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
-                </TouchableOpacity>
-
-                {/* Font family control */}
-                <TouchableOpacity style={styles.controlButton} onPress={cycleFontFamily}>
-                  <View style={[styles.fontIcon, { borderColor: "#FFFFFF" }]}>
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>Aa</Text>
-                  </View>
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>FONT</Text>
-                </TouchableOpacity>
-
-                {/* Alignment control */}
-                <TouchableOpacity style={styles.controlButton} onPress={cycleAlignment}>
-                  <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>
-                      {currentAlignment === "left"
-                        ? "←"
-                        : currentAlignment === "center"
-                        ? "↔"
-                        : "→"}
-                    </Text>
-                  </View>
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>ALIGN</Text>
-                </TouchableOpacity>
-
-                {/* Preview control */}
-                <Pressable
-                  style={styles.controlButton}
-                  onPress={togglePreviewMode}
-                  onPressIn={handlePreviewPressIn}
-                  onPressOut={handlePreviewPressOut}
-                >
-                  <View
-                    style={[
-                      styles.previewIcon,
-                      {
-                        borderColor: "#FFFFFF",
-                        backgroundColor: isHoldingPreview
-                          ? "rgba(255, 255, 255, 0.2)"
-                          : "transparent",
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>📄</Text>
-                  </View>
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>PREVIEW</Text>
-                </Pressable>
-
-                {/* Share control */}
-                <TouchableOpacity style={styles.controlButton} onPress={handleShare}>
-                  <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
-                    <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
-                  </View>
-                  <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SHARE</Text>
-                </TouchableOpacity>
-              </View>
+              <TopControls
+                currentBackgroundColor={currentBackgroundColor}
+                currentTextColor={currentTextColor}
+                currentAlignment={currentAlignment}
+                isHoldingPreview={isHoldingPreview}
+                onCycleBackgroundColor={cycleBackgroundColor}
+                onOpenBackgroundColorMenu={() => openColorMenu("background")}
+                onCycleTextColor={cycleTextColor}
+                onOpenTextColorMenu={() => openColorMenu("text")}
+                onCycleFontFamily={cycleFontFamily}
+                onCycleAlignment={cycleAlignment}
+                onTogglePreview={togglePreviewMode}
+                onPreviewPressIn={handlePreviewPressIn}
+                onPreviewPressOut={handlePreviewPressOut}
+                onShare={handleShare}
+              />
             )}
 
             {/* Main content area */}
@@ -1983,94 +1541,18 @@ function AppContent() {
               )
             ) : (
               /* Gallery view */
-              <View style={styles.galleryContainer}>
-                <ScrollView
-                  style={styles.galleryScrollView}
-                  contentContainerStyle={styles.galleryContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  {sortedGalleryImages.length === 0 ? (
-                    <View style={styles.emptyGalleryContainer}>
-                      <Text style={styles.emptyGalleryText}>
-                        No saved images yet. Create some text art and use "New" to save it!
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.thumbnailGrid}>
-                      {sortedGalleryImages.map((image, index) => {
-                        return (
-                          <View
-                            key={image.id}
-                            style={[
-                              styles.thumbnailContainer,
-                              // Remove right margin for every 3rd item (right column)
-                              (index + 1) % 3 === 0 && { marginRight: 0 },
-                            ]}
-                          >
-                            <TouchableOpacity
-                              style={styles.thumbnailTouchable}
-                              onPress={() => handleImageSelection(image)}
-                              onLongPress={() => showImageActionSheet(image)}
-                            >
-                              <View
-                                style={[
-                                  styles.thumbnail,
-                                  {
-                                    backgroundColor:
-                                      activeImageId === image.id
-                                        ? COLORS[backgroundColorIndex]
-                                        : COLOR_VALUES[image.backgroundColor],
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.thumbnailText,
-                                    {
-                                      color:
-                                        activeImageId === image.id
-                                          ? COLORS[textColorIndex]
-                                          : COLOR_VALUES[image.textColor],
-                                      fontSize:
-                                        (activeImageId === image.id ? fontSize : image.fontSize) *
-                                        0.21, // Precisely tuned to match original character density
-                                      textAlign:
-                                        activeImageId === image.id
-                                          ? ALIGNMENTS[alignment]
-                                          : ALIGNMENTS[image.alignment],
-                                      fontFamily:
-                                        activeImageId === image.id
-                                          ? FONT_FAMILIES[fontFamily] === "System"
-                                            ? undefined
-                                            : FONT_FAMILIES[fontFamily]
-                                          : FONT_FAMILIES[image.fontFamily] === "System"
-                                          ? undefined
-                                          : FONT_FAMILIES[image.fontFamily],
-                                    },
-                                  ]}
-                                  numberOfLines={15}
-                                  ellipsizeMode="tail"
-                                >
-                                  {activeImageId === image.id ? text : image.text}
-                                </Text>
-                              </View>
-                              <Text style={styles.thumbnailDate}>
-                                {new Date(image.createdAt).toLocaleDateString()}
-                              </Text>
-                            </TouchableOpacity>
-                            {/* Heart icon for favorited images */}
-                            {image.isFavorited && (
-                              <View style={styles.heartIcon}>
-                                <Text style={styles.heartIconText}>❤️</Text>
-                              </View>
-                            )}
-                          </View>
-                        );
-                      })}
-                    </View>
-                  )}
-                </ScrollView>
-              </View>
+              <GalleryView
+                sortedGalleryImages={sortedGalleryImages}
+                activeImageId={activeImageId}
+                backgroundColorIndex={backgroundColorIndex}
+                textColorIndex={textColorIndex}
+                alignment={alignment}
+                fontFamily={fontFamily}
+                fontSize={fontSize}
+                text={text}
+                onImageSelection={handleImageSelection}
+                onImageActionSheet={showImageActionSheet}
+              />
             )}
           </View>
         </TouchableWithoutFeedback>
@@ -2230,857 +1712,68 @@ function AppContent() {
       )}
 
       {/* Delete confirmation modal */}
-      {deleteModalVisible && (
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <Text style={styles.deleteModalTitle}>Delete Image</Text>
-            <Text style={styles.deleteModalMessage}>This action cannot be undone.</Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.cancelButton]}
-                onPress={cancelDelete}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.confirmButton]}
-                onPress={() => deleteImageFromGallery(imageToDelete?.id)}
-              >
-                <Text style={styles.confirmButtonText}>Yes</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+      <DeleteModal
+        visible={deleteModalVisible}
+        imageToDelete={imageToDelete}
+        onConfirm={deleteImageFromGallery}
+        onCancel={cancelDelete}
+      />
 
       {/* Share modal */}
-      {shareModalVisible && imageToShare && (
-        <View style={styles.shareModalOverlay}>
-          <View style={styles.shareModalContainer}>
-            <Text style={styles.shareModalTitle}>Share Image</Text>
-            <Text style={styles.shareModalMessage}>Choose how to share your image:</Text>
-            <View style={styles.shareModalButtons}>
-              <TouchableOpacity
-                style={[styles.shareModalButton, styles.shareOptionButton]}
-                onPress={async () => {
-                  closeShareModal();
-                  // Save to Photos
-                  try {
-                    const { status } = await MediaLibrary.requestPermissionsAsync();
-                    if (status !== "granted") {
-                      Alert.alert(
-                        "Permission Required",
-                        "Please grant photo library permissions to save images."
-                      );
-                      return;
-                    }
-                    await MediaLibrary.saveToLibraryAsync(imageToShare.path);
-                    Alert.alert("Success", "Image saved to Photos!");
-                  } catch (error) {
-                    Alert.alert("Error", "Failed to save image to Photos.");
-                  }
-                }}
-              >
-                <Text style={styles.shareOptionText}>Save to Photos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.shareModalButton, styles.shareOptionButton]}
-                onPress={() => {
-                  closeShareModal();
-                  copyImageFromGallery(imageToShare.id);
-                }}
-              >
-                <Text style={styles.shareOptionText}>Copy to Clipboard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.shareModalButton, styles.shareOptionButton]}
-                onPress={async () => {
-                  closeShareModal();
-                  try {
-                    if (await Sharing.isAvailableAsync()) {
-                      // Check if the stored file exists and is accessible
-                      const fileInfo = await FileSystem.getInfoAsync(imageToShare.path);
-                      let shareUri = imageToShare.path;
-
-                      if (fileInfo.exists) {
-                        // File exists, save it with meaningful filename for sharing
-                        const existingFilenames = galleryImages.map((img) => img.filename);
-                        shareUri = await saveImageForSharing(
-                          imageToShare.path,
-                          imageToShare.text,
-                          existingFilenames
-                        );
-                      } else {
-                        // File doesn't exist, recreate by restoring the image and capturing it
-                        restoreImageFromGallery(imageToShare);
-
-                        // Wait a moment for the image to render, then capture it
-                        await new Promise((resolve) => setTimeout(resolve, 100));
-                        const capturedUri = await captureRef(captureTextRef, {
-                          format: "jpg",
-                          quality: 1.0,
-                        });
-
-                        // Save the captured image with meaningful filename
-                        const existingFilenames = galleryImages.map((img) => img.filename);
-                        shareUri = await saveImageForSharing(
-                          capturedUri,
-                          imageToShare.text,
-                          existingFilenames
-                        );
-                      }
-
-                      await Sharing.shareAsync(shareUri, {
-                        mimeType: "image/jpeg",
-                        dialogTitle: "Share your text image",
-                      });
-                    } else {
-                      Alert.alert("Error", "Sharing is not available on this device.");
-                    }
-                  } catch (error) {
-                    console.error("Share error:", error);
-                    Alert.alert(
-                      "Error",
-                      `Failed to share image: ${error.message || error.toString()}`
-                    );
-                  }
-                }}
-              >
-                <Text style={styles.shareOptionText}>Share via Apps</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.shareModalButton, styles.cancelButton]}
-                onPress={closeShareModal}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+      <ShareModal
+        visible={shareModalVisible}
+        imageToShare={imageToShare}
+        galleryImages={galleryImages}
+        captureTextRef={captureTextRef}
+        onClose={closeShareModal}
+        onCopyImage={copyImageFromGallery}
+        restoreImageFromGallery={restoreImageFromGallery}
+      />
 
       {/* Color selection menu */}
-      {(colorMenuVisible || shadeMenuVisible) && (
-        <Animated.View
-          style={[
-            styles.colorMenuOverlay,
-            {
-              transform: [
-                {
-                  translateY: colorMenuAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [Dimensions.get("window").width, 0], // Slide up from bottom in pixels
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TouchableWithoutFeedback
-            onPress={shadeMenuVisible ? closeShadeSelector : closeColorMenu}
-          >
-            <View style={styles.colorMenuBackground} />
-          </TouchableWithoutFeedback>
+      <ColorMenu
+        colorMenuVisible={colorMenuVisible}
+        shadeMenuVisible={shadeMenuVisible}
+        colorMenuAnimation={colorMenuAnimation}
+        colorMenuType={colorMenuType}
+        shadeMenuColor={shadeMenuColor}
+        highlightedRow={highlightedRow}
+        highlightedColumn={highlightedColumn}
+        bgColorMode={bgColorMode}
+        bgColorModeSelection={bgColorModeSelection}
+        textColorMode={textColorMode}
+        textColorModeSelection={textColorModeSelection}
+        onClose={closeColorMenu}
+        onCloseShadeSelector={closeShadeSelector}
+        onDismissShadeSelector={dismissShadeSelector}
+        onSelectColorVariation={selectColorVariation}
+        onSelectPalette={selectPalette}
+        onSelectDirectColor={selectDirectColor}
+        onSelectShadeColor={(shade, rowIndex) => {
+          // Update the current color with selected shade
+          setSelectedShadeColor(shade);
+          setSelectedShadeType(colorMenuType); // Remember which type this shade applies to
 
-          <View style={styles.colorMenuContainer}>
-            {/* 9x9 Grid */}
-            <View style={styles.colorGrid}>
-              {/* Top row: empty corner + down arrows */}
-              <View style={styles.colorGridRow}>
-                {/* Exit/Back button in top-left corner */}
-                <TouchableOpacity
-                  style={[styles.colorCell, styles.exitCell]}
-                  onPress={shadeMenuVisible ? closeShadeSelector : closeColorMenu}
-                >
-                  <Text style={styles.exitText}>{shadeMenuVisible ? "←" : "×"}</Text>
-                </TouchableOpacity>
+          // Highlight the row that contains the selected shade
+          setHighlightedRow(rowIndex);
+          setHighlightedColumn(-1);
 
-                {/* Radio buttons for color variations or shade columns */}
-                {!shadeMenuVisible
-                  ? // Regular color variation radio buttons
-                    COLORS.map((_, colorIndex) => (
-                      <TouchableOpacity
-                        key={`radio-column-${colorIndex}`}
-                        style={[styles.colorCell, styles.radioCell]}
-                        onPress={() => selectColorVariation(colorIndex)}
-                      >
-                        <View style={styles.radioButton}>
-                          <View
-                            style={[
-                              styles.radioButtonInner,
-                              (colorMenuType === "background" &&
-                                bgColorMode === "variations" &&
-                                bgColorModeSelection === colorIndex) ||
-                              (colorMenuType === "text" &&
-                                textColorMode === "variations" &&
-                                textColorModeSelection === colorIndex)
-                                ? styles.radioButtonSelected
-                                : null,
-                            ]}
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    ))
-                  : // Shade selector column radio buttons (8 columns)
-                    Array.from({ length: 8 }, (_, columnIndex) => (
-                      <TouchableOpacity
-                        key={`shade-column-${columnIndex}`}
-                        style={[styles.colorCell, styles.radioCell]}
-                        onPress={() => {
-                          setHighlightedColumn(columnIndex);
-                          setHighlightedRow(-1);
-                        }}
-                      >
-                        <View style={styles.radioButton}>
-                          <View
-                            style={[
-                              styles.radioButtonInner,
-                              highlightedColumn === columnIndex ? styles.radioButtonSelected : null,
-                            ]}
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-              </View>
-
-              {/* 8 rows of colors or shades */}
-              {!shadeMenuVisible
-                ? // Regular palette rows
-                  ALL_COLORS.map((palette, paletteIndex) => (
-                    <View key={`palette-${paletteIndex}`} style={styles.colorGridRow}>
-                      {/* Radio button for palette selection */}
-                      <TouchableOpacity
-                        style={[styles.colorCell, styles.radioCell]}
-                        onPress={() => selectPalette(paletteIndex)}
-                      >
-                        <View style={styles.radioButton}>
-                          <View
-                            style={[
-                              styles.radioButtonInner,
-                              (colorMenuType === "background" &&
-                                bgColorMode === "palette" &&
-                                bgColorModeSelection === paletteIndex) ||
-                              (colorMenuType === "text" &&
-                                textColorMode === "palette" &&
-                                textColorModeSelection === paletteIndex)
-                                ? styles.radioButtonSelected
-                                : null,
-                            ]}
-                          />
-                        </View>
-                      </TouchableOpacity>
-
-                      {/* 8 colors in this palette with row highlight overlay */}
-                      <View style={styles.colorRowContainer}>
-                        {palette.map((color, colorIndex) => (
-                          <TouchableOpacity
-                            key={`color-${paletteIndex}-${colorIndex}`}
-                            style={[styles.colorCell, { backgroundColor: color }]}
-                            onPress={() => selectDirectColor(paletteIndex, colorIndex)}
-                            onLongPress={() => openShadeSelector(color, colorIndex)}
-                          />
-                        ))}
-
-                        {/* Row highlight overlay */}
-                        {highlightedRow === paletteIndex && (
-                          <View style={styles.rowHighlight} pointerEvents="none" />
-                        )}
-                      </View>
-                    </View>
-                  ))
-                : // Shade selector rows
-                  (() => {
-                    // Find the color index from COLORS array based on shadeMenuColor
-                    let colorIndex = 0;
-                    for (let i = 0; i < COLORS.length; i++) {
-                      // Check if any palette contains this color at this index
-                      for (let j = 0; j < ALL_COLORS.length; j++) {
-                        if (ALL_COLORS[j][i] === shadeMenuColor) {
-                          colorIndex = i;
-                          break;
-                        }
-                      }
-                    }
-
-                    const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
-
-                    return shadeGrid.map((shadeRow, rowIndex) => (
-                      <View key={`shade-row-${rowIndex}`} style={styles.colorGridRow}>
-                        {/* Radio button for shade row selection */}
-                        <TouchableOpacity
-                          style={[styles.colorCell, styles.radioCell]}
-                          onPress={() => {
-                            setHighlightedRow(rowIndex);
-                            setHighlightedColumn(-1);
-                          }}
-                        >
-                          <View style={styles.radioButton}>
-                            <View
-                              style={[
-                                styles.radioButtonInner,
-                                highlightedRow === rowIndex ? styles.radioButtonSelected : null,
-                              ]}
-                            />
-                          </View>
-                        </TouchableOpacity>
-
-                        {/* 8 shade colors in this row with highlight overlay */}
-                        <View style={styles.colorRowContainer}>
-                          {shadeRow.map((shade, colIndex) => (
-                            <TouchableOpacity
-                              key={`shade-${rowIndex}-${colIndex}`}
-                              style={[styles.colorCell, { backgroundColor: shade }]}
-                              onPress={() => {
-                                // Update the current color with selected shade
-                                setSelectedShadeColor(shade);
-                              }}
-                            />
-                          ))}
-
-                          {/* Row highlight overlay */}
-                          {highlightedRow === rowIndex && (
-                            <View style={styles.rowHighlight} pointerEvents="none" />
-                          )}
-                        </View>
-                      </View>
-                    ));
-                  })()}
-
-              {/* Column highlight overlays */}
-              {highlightedColumn !== -1 && (
-                <View style={styles.columnHighlightContainer} pointerEvents="none">
-                  <View
-                    style={[
-                      styles.columnHighlight,
-                      {
-                        left: (Dimensions.get("window").width / 9) * (highlightedColumn + 1), // Skip first column (arrows) in pixels
-                      },
-                    ]}
-                  />
-                </View>
-              )}
-            </View>
-          </View>
-        </Animated.View>
-      )}
+          // Don't close the shade menu - let user continue exploring shades
+          // The menu will be closed manually by user or when they select a different color
+        }}
+        onRowSelect={(rowIndex) => {
+          setHighlightedRow(rowIndex);
+          setHighlightedColumn(-1);
+        }}
+        onColumnSelect={(columnIndex) => {
+          setHighlightedColumn(columnIndex);
+          setHighlightedRow(-1);
+        }}
+        onOpenShadeSelector={openShadeSelector}
+      />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
-  textContainer: {
-    flex: 1,
-    justifyContent: "flex-start",
-    paddingTop: "5%",
-    overflow: "visible",
-  },
-  textInput: {
-    flex: 1,
-    textAlignVertical: "top",
-    lineHeight: undefined, // Let it calculate automatically
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    paddingHorizontal: "5%",
-    paddingTop: "5%",
-  },
-  placeholderText: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    textAlignVertical: "center",
-    fontWeight: "bold",
-    paddingHorizontal: "5%",
-    paddingTop: "5%",
-  },
-  captureContainer: {
-    position: "absolute",
-    width: "100%",
-    paddingHorizontal: "5%",
-    paddingTop: "5%",
-    paddingBottom: "5%",
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  captureText: {
-    textAlignVertical: "top",
-    flex: 0,
-  },
-  watermark: {
-    fontSize: 12, // Watermark text size in pixels
-    textAlign: "center",
-    marginTop: 40, // Minimum top margin from text in pixels
-    opacity: 0.7,
-    fontStyle: "italic",
-  },
-  previewContainer: {
-    position: "absolute",
-    width: "100%",
-    paddingTop: "5%",
-    paddingBottom: "5%",
-    borderRadius: 0,
-    overflow: "visible",
-  },
-  previewOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: Dimensions.get("window").width, // Full screen width in pixels
-    height: Dimensions.get("window").height, // Full screen height in pixels
-    zIndex: 1000, // Ensure it's on top
-  },
-  previewOverlayBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#000000", // Black background
-  },
-  previewHeader: {
-    position: "absolute",
-    top: 60, // Space from top of screen in pixels
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20, // Horizontal padding in pixels
-    zIndex: 1001, // Above the overlay background
-  },
-  previewLeftButtons: {
-    flexDirection: "row",
-    gap: 20, // Space between BACK and EDIT buttons in pixels
-  },
-  previewCenterContainer: {
-    // Centering properties will be applied inline for proper dynamic values
-  },
-  previewScrollContainer: {
-    width: Dimensions.get("window").width,
-  },
-  previewContainerOverlay: {
-    paddingTop: "5%",
-    paddingBottom: "5%",
-    borderRadius: 0,
-  },
-  previewText: {
-    textAlignVertical: "top",
-    paddingHorizontal: "5%", // Text padding in pixels
-  },
-  measureText: {
-    position: "absolute",
-    opacity: 0, // Invisible but measurable
-    textAlignVertical: "top",
-    paddingHorizontal: "5%",
-    paddingTop: "5%",
-    width: "100%",
-    pointerEvents: "none", // Don't interfere with touch events
-  },
-  emptyPreviewContainer: {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: [{ translateX: -150 }, { translateY: -25 }], // Center the 300px wide container
-    width: 300, // Fixed width in pixels
-    height: 50, // Fixed height in pixels
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyPreviewText: {
-    color: "#FFFFFF", // White text on black background
-    fontSize: 16, // Font size in pixels
-    textAlign: "center",
-    fontStyle: "italic",
-    opacity: 0.8,
-  },
-  topControlsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    paddingVertical: 5, // Vertical padding in pixels
-    paddingHorizontal: 20, // Horizontal padding in pixels
-    backgroundColor: "#000000", // Black background for controls
-  },
-  controlButton: {
-    alignItems: "center",
-  },
-  colorCircle: {
-    width: 40, // Button width in pixels
-    height: 40, // Button height in pixels
-    borderRadius: 20, // Corner radius in pixels
-    borderWidth: 2, // Border thickness in pixels
-    marginBottom: 5, // Bottom margin in pixels
-  },
-  alignmentIcon: {
-    width: 40, // Icon width in pixels
-    height: 40, // Icon height in pixels
-    borderRadius: 20, // Corner radius in pixels
-    borderWidth: 2, // Border thickness in pixels
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5, // Bottom margin in pixels
-  },
-  shareIcon: {
-    width: 40, // Icon width in pixels
-    height: 40, // Icon height in pixels
-    borderRadius: 20, // Corner radius in pixels
-    borderWidth: 2, // Border thickness in pixels
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5, // Bottom margin in pixels
-  },
-  previewIcon: {
-    width: 40, // Icon width in pixels
-    height: 40, // Icon height in pixels
-    borderRadius: 20, // Corner radius in pixels
-    borderWidth: 2, // Border thickness in pixels
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5, // Bottom margin in pixels
-  },
-  fontIcon: {
-    width: 40, // Icon width in pixels
-    height: 40, // Icon height in pixels
-    borderRadius: 20, // Corner radius in pixels
-    borderWidth: 2, // Border thickness in pixels
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 5, // Bottom margin in pixels
-  },
-  alignmentText: {
-    fontSize: 18, // Text size in pixels
-    fontWeight: "bold",
-  },
-  controlLabel: {
-    fontSize: 10, // Label text size in pixels
-    fontWeight: "bold",
-  },
-  navigationContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20, // Horizontal padding in pixels
-    paddingVertical: 5, // Vertical padding in pixels
-    backgroundColor: "#000000", // Black background
-  },
-  navigationText: {
-    color: GOLDEN_COLOR,
-    fontSize: 14, // Navigation text size in pixels
-    fontWeight: "500",
-  },
-  galleryContainer: {
-    flex: 1,
-    backgroundColor: "#000000", // Black background
-  },
-  galleryScrollView: {
-    flex: 1,
-  },
-  galleryContent: {
-    padding: 20, // Content padding in pixels
-  },
-  emptyGalleryContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 100, // Vertical padding in pixels
-  },
-  emptyGalleryText: {
-    color: "#FFFFFF", // White text
-    fontSize: 16, // Font size in pixels
-    textAlign: "center",
-    fontStyle: "italic",
-    opacity: 0.7,
-    paddingHorizontal: 40, // Horizontal padding in pixels
-  },
-  thumbnailGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-start",
-  },
-  thumbnailContainer: {
-    width: "31%", // Three columns with gaps
-    marginBottom: 20, // Bottom margin in pixels
-    marginRight: "3.5%", // Right margin for spacing between columns
-  },
-  currentWorkContainer: {
-    borderWidth: 2, // Border thickness in pixels
-    borderColor: GOLDEN_COLOR, // Golden border to highlight current work
-    borderRadius: 8, // Border radius in pixels
-  },
-  thumbnail: {
-    aspectRatio: 9 / 12.8, // 20% shorter height than iPhone screen ratio
-    borderRadius: 8, // Corner radius in pixels
-    padding: 10, // Inner padding in pixels
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    overflow: "hidden", // Clip content that exceeds height
-  },
-  thumbnailText: {
-    fontWeight: "500",
-  },
-  thumbnailDate: {
-    color: GOLDEN_COLOR,
-    fontSize: 12, // Date text size in pixels
-    textAlign: "center",
-    marginTop: 5, // Top margin in pixels
-    opacity: 0.8,
-  },
-  thumbnailTouchable: {
-    flex: 1,
-  },
-  deleteButton: {
-    position: "absolute",
-    top: -5, // Top offset in pixels
-    right: -5, // Right offset in pixels
-    width: 24, // Button width in pixels
-    height: 24, // Button height in pixels
-    borderRadius: 12, // Corner radius in pixels
-    backgroundColor: "#FF0000", // Red background
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10, // Ensure it's above thumbnail
-  },
-  deleteButtonText: {
-    color: "#FFFFFF", // White text
-    fontSize: 14, // Font size in pixels
-    fontWeight: "bold",
-    lineHeight: 16, // Line height in pixels
-  },
-  deleteModalOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Semi-transparent black overlay
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1001, // Above everything else
-  },
-  deleteModalContainer: {
-    backgroundColor: "#FFFFFF", // White background
-    borderRadius: 12, // Corner radius in pixels
-    padding: 20, // Container padding in pixels
-    margin: 20, // Container margin in pixels
-    maxWidth: 300, // Maximum width in pixels
-    width: "80%",
-  },
-  deleteModalTitle: {
-    fontSize: 18, // Title text size in pixels
-    fontWeight: "bold",
-    color: "#000000", // Black text
-    textAlign: "center",
-    marginBottom: 10, // Bottom margin in pixels
-  },
-  deleteModalMessage: {
-    fontSize: 16, // Message text size in pixels
-    color: "#333333", // Dark gray text
-    textAlign: "center",
-    marginBottom: 20, // Bottom margin in pixels
-    lineHeight: 22, // Line height in pixels
-  },
-  deleteModalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  deleteModalButton: {
-    flex: 1,
-    padding: 12, // Button padding in pixels
-    borderRadius: 8, // Corner radius in pixels
-    marginHorizontal: 5, // Horizontal margin in pixels
-  },
-  cancelButton: {
-    backgroundColor: "#E0E0E0", // Light gray background
-  },
-  confirmButton: {
-    backgroundColor: "#FF0000", // Red background
-  },
-  cancelButtonText: {
-    color: "#333333", // Dark gray text
-    fontSize: 16, // Font size in pixels
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  confirmButtonText: {
-    color: "#FFFFFF", // White text
-    fontSize: 16, // Font size in pixels
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  heartIcon: {
-    position: "absolute",
-    top: 5, // Top offset in pixels
-    left: 5, // Left offset in pixels
-    backgroundColor: "rgba(255, 255, 255, 0.9)", // Semi-transparent white background
-    borderRadius: 12, // Corner radius in pixels
-    padding: 4, // Icon padding in pixels
-    zIndex: 5, // Above thumbnail content
-  },
-  heartIconText: {
-    fontSize: 16, // Heart emoji size in pixels
-  },
-  shareModalOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)", // Semi-transparent black overlay
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1002, // Above delete modal
-  },
-  shareModalContainer: {
-    backgroundColor: "#FFFFFF", // White background
-    borderRadius: 12, // Corner radius in pixels
-    padding: 20, // Container padding in pixels
-    margin: 20, // Container margin in pixels
-    maxWidth: 300, // Maximum width in pixels
-    width: "80%",
-  },
-  shareModalTitle: {
-    fontSize: 18, // Title text size in pixels
-    fontWeight: "bold",
-    color: "#000000", // Black text
-    textAlign: "center",
-    marginBottom: 10, // Bottom margin in pixels
-  },
-  shareModalMessage: {
-    fontSize: 16, // Message text size in pixels
-    color: "#333333", // Dark gray text
-    textAlign: "center",
-    marginBottom: 20, // Bottom margin in pixels
-    lineHeight: 22, // Line height in pixels
-  },
-  shareModalButtons: {
-    flexDirection: "column",
-  },
-  shareModalButton: {
-    padding: 12, // Button padding in pixels
-    borderRadius: 8, // Corner radius in pixels
-    marginVertical: 5, // Vertical margin in pixels
-  },
-  shareOptionButton: {
-    backgroundColor: "#007AFF", // iOS blue background
-  },
-  shareOptionText: {
-    color: "#FFFFFF", // White text
-    fontSize: 16, // Font size in pixels
-    fontWeight: "600",
-    textAlign: "center",
-  },
-
-  // Color menu styles
-  colorMenuOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: Dimensions.get("window").width, // Square grid, height equals screen width in pixels
-    zIndex: 1003, // Above all other modals
-  },
-  colorMenuBackground: {
-    position: "absolute",
-    top: -Dimensions.get("window").height, // Cover entire screen above menu
-    left: 0,
-    right: 0,
-    height: Dimensions.get("window").height, // Full screen height in pixels
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent overlay
-  },
-  colorMenuContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#000000", // Black background for menu area
-  },
-  colorGrid: {
-    width: Dimensions.get("window").width, // Full screen width in pixels
-    height: Dimensions.get("window").width, // Square grid in pixels
-  },
-  colorGridRow: {
-    flexDirection: "row",
-    flex: 1,
-  },
-  colorCell: {
-    flex: 1,
-    borderWidth: 1, // Border thickness in pixels
-    borderColor: "#333333", // Dark gray border
-  },
-  radioCell: {
-    backgroundColor: "#222222", // Dark background for radio buttons
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  radioButton: {
-    width: 20, // Radio button outer circle width in pixels
-    height: 20, // Radio button outer circle height in pixels
-    borderRadius: 10, // Circular shape in pixels
-    borderWidth: 2, // Border thickness in pixels
-    borderColor: "#FFFFFF", // White border
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  radioButtonInner: {
-    width: 10, // Radio button inner circle width in pixels
-    height: 10, // Radio button inner circle height in pixels
-    borderRadius: 5, // Circular shape in pixels
-    backgroundColor: "transparent",
-  },
-  radioButtonSelected: {
-    backgroundColor: "#FFCC02", // Golden fill when selected
-  },
-  exitCell: {
-    backgroundColor: "#000000", // Black background for exit button
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  exitText: {
-    color: "#FFFFFF", // White X text
-    fontSize: 28, // Large X size in pixels
-    fontWeight: "bold",
-  },
-  colorRowContainer: {
-    flexDirection: "row",
-    flex: 8, // Takes up 8 units of the 9-unit row (excluding arrow)
-    position: "relative",
-  },
-  rowHighlight: {
-    position: "absolute",
-    top: -2, // Extend outside the row in pixels
-    left: -2, // Extend outside the row in pixels
-    right: -2, // Extend outside the row in pixels
-    bottom: -2, // Extend outside the row in pixels
-    borderWidth: 3, // Thick golden border in pixels
-    borderColor: "#FFCC02", // Golden highlight color
-    backgroundColor: "transparent", // Transparent background
-    pointerEvents: "none", // Don't interfere with touches
-  },
-  columnHighlightContainer: {
-    position: "absolute",
-    top: Dimensions.get("window").width / 9, // Start after the arrow row in pixels
-    left: 0,
-    right: 0,
-    height: Dimensions.get("window").width * (8 / 9), // Height of 8 color rows in pixels
-    pointerEvents: "none",
-  },
-  columnHighlight: {
-    position: "absolute",
-    top: -2, // Extend above column in pixels
-    bottom: -2, // Extend below column in pixels
-    width: Dimensions.get("window").width / 9 + 4, // Column width plus border extension in pixels
-    borderWidth: 3, // Thick golden border in pixels
-    borderColor: "#FFCC02", // Golden highlight color
-    backgroundColor: "transparent", // Transparent background
-  },
-});
 
 export default function App() {
   return (
