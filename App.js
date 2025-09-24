@@ -90,6 +90,9 @@ function AppContent() {
     setSelectedShadeType,
     getCurrentBackgroundColor,
     getCurrentTextColor,
+    getPalette,
+    saveShadeRowAsPalette,
+    customPalettes,
   } = useColorManagement();
 
   const {
@@ -175,6 +178,30 @@ function AppContent() {
 
   // Color menu functions
   const openColorMenu = (type) => {
+    console.log("openColorMenu called with type:", type);
+
+    // Check if current palette is a custom shade palette
+    const currentPaletteIndex =
+      type === "background" ? bgColorModeSelection : textColorModeSelection;
+    const currentColorMode = type === "background" ? bgColorMode : textColorMode;
+
+    console.log("Palette info:", {
+      currentPaletteIndex,
+      currentColorMode,
+      customPalettesLength: customPalettes.length,
+    });
+
+    // If it's a custom palette (index >= ALL_COLORS.length) and in palette mode, open shade selector directly
+    if (currentColorMode === "palette" && currentPaletteIndex >= ALL_COLORS.length) {
+      const customPalette = getPalette(currentPaletteIndex);
+      const currentColorIndex = type === "background" ? backgroundColorIndex : textColorIndex;
+      const currentColor = customPalette[currentColorIndex];
+
+      // Open shade selector directly for the current color
+      openShadeSelector(currentColor, currentColorIndex);
+      return;
+    }
+
     // Dismiss keyboard if it's open
     Keyboard.dismiss();
 
@@ -279,12 +306,12 @@ function AppContent() {
       setTextColorModeSelection(paletteIndex);
       setTextColorIndex(colorIndex);
     }
-    setHighlightedRow(-1);
+    setHighlightedRow(paletteIndex);
     setHighlightedColumn(-1);
     // Reset shade selection when selecting a new color
     setSelectedShadeColor(null);
     setSelectedShadeType(null);
-    closeColorMenu();
+    // Keep color menu open so users can explore different colors
   };
 
   // Shade selector functions
@@ -324,20 +351,22 @@ function AppContent() {
   };
 
   const dismissShadeSelector = () => {
-    // Just close the shade menu and return to color menu, keeping the selected shade
+    // Close both shade menu and color menu, keeping the selected shade
     setShadeMenuVisible(false);
-    setColorMenuVisible(true);
+    setColorMenuVisible(false);
     // Keep highlighting and selected shade intact
   };
 
   const closeShadeSelector = () => {
-    // Restore original color menu state
+    // Restore original color menu state (before shade selector was opened)
     setBgColorMode(originalColorMenuState.bgColorMode);
     setBgColorModeSelection(originalColorMenuState.bgColorModeSelection);
     setTextColorMode(originalColorMenuState.textColorMode);
     setTextColorModeSelection(originalColorMenuState.textColorModeSelection);
-    setHighlightedRow(originalColorMenuState.highlightedRow);
-    setHighlightedColumn(originalColorMenuState.highlightedColumn);
+
+    // Keep current highlighting from any selections made in the main color menu
+    // Don't restore originalColorMenuState highlighting since user may have made selections
+    // The current highlightedRow/highlightedColumn should be preserved
 
     // Reset selected shade color
     setSelectedShadeColor(null);
@@ -1417,8 +1446,17 @@ function AppContent() {
                 isHoldingPreview={isHoldingPreview}
                 onCycleBackgroundColor={cycleBackgroundColor}
                 onOpenBackgroundColorMenu={() => openColorMenu("background")}
-                onCycleTextColor={cycleTextColor}
-                onOpenTextColorMenu={() => openColorMenu("text")}
+                onCycleTextColor={() => {
+                  console.log("Text color tap detected!");
+                  cycleTextColor();
+                }}
+                onOpenTextColorMenu={() => {
+                  console.log(
+                    "Long press on text detected, current textColorModeSelection:",
+                    textColorModeSelection
+                  );
+                  openColorMenu("text");
+                }}
                 onCycleFontFamily={cycleFontFamily}
                 onCycleAlignment={cycleAlignment}
                 onTogglePreview={togglePreviewMode}
@@ -1750,6 +1788,40 @@ function AppContent() {
         onSelectPalette={selectPalette}
         onSelectDirectColor={selectDirectColor}
         onSelectShadeColor={(shade, rowIndex) => {
+          // Generate the shade grid to get the complete row
+          let colorIndex = -1;
+          // Find which color position (0-7) the shadeMenuColor represents
+          for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < ALL_COLORS.length; j++) {
+              if (ALL_COLORS[j][i] === shadeMenuColor) {
+                colorIndex = i;
+                break;
+              }
+            }
+          }
+
+          const { generateShadesWithExistingColors } = require("./utils/colorUtils");
+          const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
+          const selectedRow = shadeGrid[rowIndex];
+
+          // Save the selected row as a new custom palette
+          const newPaletteIndex = saveShadeRowAsPalette(selectedRow);
+
+          // Switch to the new custom palette
+          if (colorMenuType === "background") {
+            setBgColorMode("palette");
+            setBgColorModeSelection(newPaletteIndex);
+            // Find which position in the row matches the selected shade
+            const colorPosition = selectedRow.findIndex((color) => color === shade);
+            setBackgroundColorIndex(colorPosition !== -1 ? colorPosition : 0);
+          } else {
+            setTextColorMode("palette");
+            setTextColorModeSelection(newPaletteIndex);
+            // Find which position in the row matches the selected shade
+            const colorPosition = selectedRow.findIndex((color) => color === shade);
+            setTextColorIndex(colorPosition !== -1 ? colorPosition : 0);
+          }
+
           // Update the current color with selected shade
           setSelectedShadeColor(shade);
           setSelectedShadeType(colorMenuType); // Remember which type this shade applies to

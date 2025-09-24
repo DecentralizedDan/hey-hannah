@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { View, TouchableOpacity, Pressable, Text } from "react-native";
 import { ALIGNMENTS } from "../constants/colors";
 import styles from "../styles/AppStyles";
@@ -19,13 +19,48 @@ const TopControls = ({
   onPreviewPressOut,
   onShare,
 }) => {
+  const bgLongPressTimer = useRef(null);
+  const textLongPressTimer = useRef(null);
+
+  const handleBgPressIn = () => {
+    bgLongPressTimer.current = setTimeout(() => {
+      console.log("BG long press detected via timer!");
+      onOpenBackgroundColorMenu();
+    }, 500);
+  };
+
+  const handleBgPressOut = () => {
+    if (bgLongPressTimer.current) {
+      clearTimeout(bgLongPressTimer.current);
+      bgLongPressTimer.current = null;
+      console.log("BG short press detected!");
+      onCycleBackgroundColor();
+    }
+  };
+
+  const handleTextPressIn = () => {
+    textLongPressTimer.current = setTimeout(() => {
+      console.log("Text long press detected via timer!");
+      onOpenTextColorMenu();
+    }, 500);
+  };
+
+  const handleTextPressOut = () => {
+    if (textLongPressTimer.current) {
+      clearTimeout(textLongPressTimer.current);
+      textLongPressTimer.current = null;
+      console.log("Text short press detected!");
+      onCycleTextColor();
+    }
+  };
+
   return (
     <View style={[styles.topControlsContainer, { paddingTop: 20 }]}>
       {/* Background color control */}
-      <TouchableOpacity
+      <Pressable
         style={styles.controlButton}
-        onPress={onCycleBackgroundColor}
-        onLongPress={onOpenBackgroundColorMenu}
+        onPressIn={handleBgPressIn}
+        onPressOut={handleBgPressOut}
       >
         <View
           style={[
@@ -37,13 +72,13 @@ const TopControls = ({
           ]}
         />
         <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>BG</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {/* Text color control */}
-      <TouchableOpacity
+      <Pressable
         style={styles.controlButton}
-        onPress={onCycleTextColor}
-        onLongPress={onOpenTextColorMenu}
+        onPressIn={handleTextPressIn}
+        onPressOut={handleTextPressOut}
       >
         <View
           style={[
@@ -55,7 +90,7 @@ const TopControls = ({
           ]}
         />
         <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>TEXT</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       {/* Font family control */}
       <TouchableOpacity style={styles.controlButton} onPress={onCycleFontFamily}>

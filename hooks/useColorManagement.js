@@ -28,6 +28,20 @@ export const useColorManagement = () => {
   const [selectedShadeColor, setSelectedShadeColor] = useState(null);
   const [selectedShadeType, setSelectedShadeType] = useState(null); // "background" or "text"
 
+  // Custom palettes state
+  const [customPalettes, setCustomPalettes] = useState([]); // Array of custom 8-color palettes
+
+  // Helper function to get palette (predefined or custom)
+  const getPalette = (paletteIndex) => {
+    if (paletteIndex < ALL_COLORS.length) {
+      return ALL_COLORS[paletteIndex];
+    } else {
+      // Custom palette index
+      const customIndex = paletteIndex - ALL_COLORS.length;
+      return customPalettes[customIndex] || ALL_COLORS[0]; // Fallback to default
+    }
+  };
+
   // Helper functions to get current colors from new palette system
   const getCurrentBackgroundColor = (backgroundColorIndex) => {
     // If a shade color is selected for background, use that
@@ -36,11 +50,13 @@ export const useColorManagement = () => {
     }
 
     if (bgColorMode === "palette") {
-      return ALL_COLORS[bgColorModeSelection][backgroundColorIndex];
+      const palette = getPalette(bgColorModeSelection);
+      return palette[backgroundColorIndex];
     } else {
       // variations mode - bgColorModeSelection is the color type (0=red, 1=orange, etc.)
       // backgroundColorIndex is the palette index (0-7)
-      return ALL_COLORS[backgroundColorIndex][bgColorModeSelection];
+      const palette = getPalette(backgroundColorIndex);
+      return palette[bgColorModeSelection];
     }
   };
 
@@ -51,12 +67,22 @@ export const useColorManagement = () => {
     }
 
     if (textColorMode === "palette") {
-      return ALL_COLORS[textColorModeSelection][textColorIndex];
+      const palette = getPalette(textColorModeSelection);
+      return palette[textColorIndex];
     } else {
       // variations mode - textColorModeSelection is the color type (0=red, 1=orange, etc.)
       // textColorIndex is the palette index (0-7)
-      return ALL_COLORS[textColorIndex][textColorModeSelection];
+      const palette = getPalette(textColorIndex);
+      return palette[textColorModeSelection];
     }
+  };
+
+  // Function to save a shade row as a custom palette
+  const saveShadeRowAsPalette = (shadeRow) => {
+    const newCustomPalettes = [...customPalettes, shadeRow];
+    setCustomPalettes(newCustomPalettes);
+    // Return the index of the new custom palette
+    return ALL_COLORS.length + newCustomPalettes.length - 1;
   };
 
   return {
@@ -91,5 +117,8 @@ export const useColorManagement = () => {
     // Helper functions
     getCurrentBackgroundColor,
     getCurrentTextColor,
+    getPalette,
+    saveShadeRowAsPalette,
+    customPalettes,
   };
 };
