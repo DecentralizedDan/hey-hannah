@@ -24,7 +24,6 @@ const TopControls = ({
 
   const handleBgPressIn = () => {
     bgLongPressTimer.current = setTimeout(() => {
-      console.log("BG long press detected via timer!");
       onOpenBackgroundColorMenu();
     }, 500);
   };
@@ -33,14 +32,12 @@ const TopControls = ({
     if (bgLongPressTimer.current) {
       clearTimeout(bgLongPressTimer.current);
       bgLongPressTimer.current = null;
-      console.log("BG short press detected!");
       onCycleBackgroundColor();
     }
   };
 
   const handleTextPressIn = () => {
     textLongPressTimer.current = setTimeout(() => {
-      console.log("Text long press detected via timer!");
       onOpenTextColorMenu();
     }, 500);
   };
@@ -49,7 +46,6 @@ const TopControls = ({
     if (textLongPressTimer.current) {
       clearTimeout(textLongPressTimer.current);
       textLongPressTimer.current = null;
-      console.log("Text short press detected!");
       onCycleTextColor();
     }
   };

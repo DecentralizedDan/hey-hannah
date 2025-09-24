@@ -165,11 +165,13 @@ const ColorMenu = ({
               (() => {
                 // Find the color index from COLORS array based on shadeMenuColor
                 let colorIndex = 0;
-                for (let i = 0; i < COLORS.length; i++) {
+                let found = false;
+                for (let i = 0; i < COLORS.length && !found; i++) {
                   // Check if any palette contains this color at this index
                   for (let j = 0; j < ALL_COLORS.length; j++) {
                     if (ALL_COLORS[j][i] === shadeMenuColor) {
                       colorIndex = i;
+                      found = true;
                       break;
                     }
                   }

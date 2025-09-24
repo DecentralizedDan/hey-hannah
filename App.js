@@ -4,7 +4,6 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Pressable,
   Dimensions,
   StatusBar,
   TouchableWithoutFeedback,
@@ -30,10 +29,10 @@ import { BlackOpsOne_400Regular } from "@expo-google-fonts/black-ops-one";
 import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
 
 // Import extracted modules
-import { COLORS, COLOR_VALUES, ALL_COLORS, GOLDEN_COLOR, ALIGNMENTS } from "./constants/colors";
+import { COLORS, ALL_COLORS, ALIGNMENTS } from "./constants/colors";
 import { FONT_FAMILIES } from "./constants/fonts";
 import { generateFilename, saveImageForSharing } from "./utils/fileUtils";
-import { generateColorShades, generateShadesWithExistingColors } from "./utils/colorUtils";
+import { generateShadesWithExistingColors } from "./utils/colorUtils";
 import { useColorManagement } from "./hooks/useColorManagement";
 import { useGalleryManagement } from "./hooks/useGalleryManagement";
 import styles from "./styles/AppStyles";
@@ -41,12 +40,10 @@ import styles from "./styles/AppStyles";
 // Import UI components
 import ColorMenu from "./components/ColorMenu";
 import GalleryView from "./components/GalleryView";
-import PreviewOverlay from "./components/PreviewOverlay";
 import DeleteModal from "./components/DeleteModal";
 import ShareModal from "./components/ShareModal";
 import TopControls from "./components/TopControls";
 import NavigationBar from "./components/NavigationBar";
-import TextEditor from "./components/TextEditor";
 
 function AppContent() {
   const insets = useSafeAreaInsets();
@@ -178,18 +175,10 @@ function AppContent() {
 
   // Color menu functions
   const openColorMenu = (type) => {
-    console.log("openColorMenu called with type:", type);
-
     // Check if current palette is a custom shade palette
     const currentPaletteIndex =
       type === "background" ? bgColorModeSelection : textColorModeSelection;
     const currentColorMode = type === "background" ? bgColorMode : textColorMode;
-
-    console.log("Palette info:", {
-      currentPaletteIndex,
-      currentColorMode,
-      customPalettesLength: customPalettes.length,
-    });
 
     // If it's a custom palette (index >= ALL_COLORS.length) and in palette mode, open shade selector directly
     if (currentColorMode === "palette" && currentPaletteIndex >= ALL_COLORS.length) {
@@ -197,8 +186,23 @@ function AppContent() {
       const currentColorIndex = type === "background" ? backgroundColorIndex : textColorIndex;
       const currentColor = customPalette[currentColorIndex];
 
-      // Open shade selector directly for the current color
-      openShadeSelector(currentColor, currentColorIndex);
+      // Find the correct color index in the COLORS array by matching the color
+      // This ensures shades are generated for the right color type (red=0, orange=1, yellow=2, etc.)
+      // rather than using the position within the custom palette
+      let correctColorIndex = 0;
+      let found = false;
+      for (let i = 0; i < COLORS.length && !found; i++) {
+        for (let j = 0; j < ALL_COLORS.length; j++) {
+          if (ALL_COLORS[j][i] === currentColor) {
+            correctColorIndex = i;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      // Open shade selector directly for the current color with correct index
+      openShadeSelector(currentColor, correctColorIndex);
       return;
     }
 
@@ -526,7 +530,6 @@ function AppContent() {
         }
       } catch (error) {
         // Haptic feedback may not be available on all devices or not properly linked
-        if (__DEV__) console.log("Haptic feedback not available:", error);
       }
 
       // Ensure keyboard is dismissed before capture to avoid snapshot warning
@@ -568,7 +571,6 @@ function AppContent() {
         }
       } catch (error) {
         // Haptic feedback may not be available on all devices or not properly linked
-        if (__DEV__) console.log("Haptic feedback not available:", error);
       }
 
       // Store current text for undo and clear it
@@ -648,8 +650,6 @@ function AppContent() {
       if (!captureTextRef.current) {
         if (__DEV__) {
           console.error("Capture ref unexpectedly not available");
-          console.log("Current view:", currentView);
-          console.log("Text content:", text.substring(0, 50) + "...");
         }
         Alert.alert("Error", "Text rendering not ready. Please try again in a moment.");
         return false;
@@ -726,13 +726,6 @@ function AppContent() {
           newGalleryImages = [...galleryImages];
           newGalleryImages[existingImageIndex] = updatedMetadata;
           imageId = activeImageId;
-
-          if (__DEV__) {
-            console.log(
-              "Updated image metadata with date:",
-              new Date(updatedMetadata.createdAt).toLocaleDateString()
-            );
-          }
         } else {
           // activeImageId doesn't exist in gallery, treat as new image
           return await createNewImage(uri, galleryDir);
@@ -975,7 +968,7 @@ function AppContent() {
         await Clipboard.setImageAsync(base64Image);
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
-        if (__DEV__) console.log("Image copy failed, copying text instead:", imageError);
+        if (__DEV__) console.warn("Image copy failed, copying text instead:", imageError);
 
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(image.text);
@@ -1186,7 +1179,7 @@ function AppContent() {
 
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
-        if (__DEV__) console.log("Image copy failed, copying text instead:", imageError);
+        if (__DEV__) console.warn("Image copy failed, copying text instead:", imageError);
 
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
@@ -1238,8 +1231,6 @@ function AppContent() {
           const watermarkHeight = 40; // Space for watermark and margin in pixels
           const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
-          if (__DEV__) console.log("Attempting to capture with height:", captureHeight);
-
           if (!captureTextRef.current) {
             throw new Error("Capture reference is not available");
           }
@@ -1258,8 +1249,6 @@ function AppContent() {
           if (!uri) {
             throw new Error("Failed to generate image");
           }
-
-          if (__DEV__) console.log("Capture successful, saving to library:", uri);
 
           await MediaLibrary.saveToLibraryAsync(uri);
           Alert.alert("Success", "Image saved to Photos!");
@@ -1446,17 +1435,8 @@ function AppContent() {
                 isHoldingPreview={isHoldingPreview}
                 onCycleBackgroundColor={cycleBackgroundColor}
                 onOpenBackgroundColorMenu={() => openColorMenu("background")}
-                onCycleTextColor={() => {
-                  console.log("Text color tap detected!");
-                  cycleTextColor();
-                }}
-                onOpenTextColorMenu={() => {
-                  console.log(
-                    "Long press on text detected, current textColorModeSelection:",
-                    textColorModeSelection
-                  );
-                  openColorMenu("text");
-                }}
+                onCycleTextColor={cycleTextColor}
+                onOpenTextColorMenu={() => openColorMenu("text")}
                 onCycleFontFamily={cycleFontFamily}
                 onCycleAlignment={cycleAlignment}
                 onTogglePreview={togglePreviewMode}
@@ -1790,11 +1770,13 @@ function AppContent() {
         onSelectShadeColor={(shade, rowIndex) => {
           // Generate the shade grid to get the complete row
           let colorIndex = -1;
+          let found = false;
           // Find which color position (0-7) the shadeMenuColor represents
-          for (let i = 0; i < 8; i++) {
+          for (let i = 0; i < 8 && !found; i++) {
             for (let j = 0; j < ALL_COLORS.length; j++) {
               if (ALL_COLORS[j][i] === shadeMenuColor) {
                 colorIndex = i;
+                found = true;
                 break;
               }
             }
