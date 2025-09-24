@@ -333,12 +333,57 @@ function AppContent() {
     // First close the regular color menu
     setColorMenuVisible(false);
 
-    // Set shade selector state
-    setShadeMenuColor(color);
+    // For custom palettes (which may contain shades), we need to find the original base color
+    // that corresponds to the color type
+    let baseColorForShades = color;
+    let actualColorIndex = colorIndex;
+
+    // Check if we're dealing with a custom palette
+    const currentPaletteIndex =
+      colorMenuType === "background" ? bgColorModeSelection : textColorModeSelection;
+    if (currentPaletteIndex >= ALL_COLORS.length) {
+      // This is a custom palette - determine which color type this shade belongs to
+      // by checking which base color produces shades that include this color
+      let foundColorType = false;
+
+      for (
+        let baseColorTypeIndex = 0;
+        baseColorTypeIndex < 8 && !foundColorType;
+        baseColorTypeIndex++
+      ) {
+        // Get the representative color for this type from the first palette
+        const representativeColor = ALL_COLORS[0][baseColorTypeIndex];
+        const testShadeGrid = generateShadesWithExistingColors(
+          representativeColor,
+          baseColorTypeIndex
+        );
+
+        // Check if any shade in this grid matches or is very close to our color
+        for (let row = 0; row < testShadeGrid.length; row++) {
+          if (testShadeGrid[row].includes(color)) {
+            // Found the matching base color type
+            baseColorForShades = representativeColor;
+            actualColorIndex = baseColorTypeIndex;
+            foundColorType = true;
+            break;
+          }
+        }
+      }
+
+      // If we didn't find a match, fall back to analyzing the color itself
+      if (!foundColorType) {
+        // Use the first palette's base colors as representatives
+        baseColorForShades = ALL_COLORS[0][colorIndex] || color;
+        actualColorIndex = colorIndex;
+      }
+    }
+
+    // Set shade selector state with the correct base color
+    setShadeMenuColor(baseColorForShades);
     setShadeMenuVisible(true);
 
     // Generate shades and find the row containing the long-pressed color
-    const shadeGrid = generateShadesWithExistingColors(color, colorIndex);
+    const shadeGrid = generateShadesWithExistingColors(baseColorForShades, actualColorIndex);
     let targetRow = 0;
 
     // Find which row contains the specific color that was long-pressed
@@ -349,12 +394,63 @@ function AppContent() {
       }
     }
 
-    // Highlight the row containing the long-pressed color
-    setHighlightedRow(targetRow);
-    setHighlightedColumn(-1);
+    // Only reset highlighting if we don't already have a column selected
+    // (This preserves column selection when reopening the shade menu)
+    if (highlightedColumn === -1) {
+      // First time opening or no column was previously selected - highlight the row
+      setHighlightedRow(targetRow);
+      setHighlightedColumn(-1);
+    }
+    // If highlightedColumn !== -1, keep the existing column selection intact
   };
 
   const dismissShadeSelector = () => {
+    // Check if a column is selected and save it before closing
+    if (highlightedColumn !== -1) {
+      // User selected a column - save the column of shades
+      let colorIndex = -1;
+      let found = false;
+      // Find which color position (0-7) the shadeMenuColor represents
+      for (let i = 0; i < 8 && !found; i++) {
+        for (let j = 0; j < ALL_COLORS.length; j++) {
+          if (ALL_COLORS[j][i] === shadeMenuColor) {
+            colorIndex = i;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
+
+      // Extract the selected column from the 8x8 grid
+      const selectedColumn = [];
+      for (let row = 0; row < 8; row++) {
+        selectedColumn.push(shadeGrid[row][highlightedColumn]);
+      }
+
+      // Save the selected column as a new custom palette
+      const newPaletteIndex = saveShadeRowAsPalette(selectedColumn);
+
+      // Switch to the new custom palette
+      if (colorMenuType === "background") {
+        setBgColorMode("palette");
+        setBgColorModeSelection(newPaletteIndex);
+        // Use the current color from the column
+        setBackgroundColorIndex(highlightedColumn);
+      } else {
+        setTextColorMode("palette");
+        setTextColorModeSelection(newPaletteIndex);
+        // Use the current color from the column
+        setTextColorIndex(highlightedColumn);
+      }
+
+      // Update the current color with the shade from the selected column
+      const selectedShade = selectedColumn[highlightedColumn] || selectedColumn[0];
+      setSelectedShadeColor(selectedShade);
+      setSelectedShadeType(colorMenuType);
+    }
+
     // Close both shade menu and color menu, keeping the selected shade
     setShadeMenuVisible(false);
     setColorMenuVisible(false);
@@ -1782,7 +1878,6 @@ function AppContent() {
             }
           }
 
-          const { generateShadesWithExistingColors } = require("./utils/colorUtils");
           const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
           const selectedRow = shadeGrid[rowIndex];
 

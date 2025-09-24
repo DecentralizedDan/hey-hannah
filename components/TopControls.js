@@ -21,9 +21,13 @@ const TopControls = ({
 }) => {
   const bgLongPressTimer = useRef(null);
   const textLongPressTimer = useRef(null);
+  const bgLongPressFired = useRef(false);
+  const textLongPressFired = useRef(false);
 
   const handleBgPressIn = () => {
+    bgLongPressFired.current = false;
     bgLongPressTimer.current = setTimeout(() => {
+      bgLongPressFired.current = true;
       onOpenBackgroundColorMenu();
     }, 500);
   };
@@ -32,12 +36,18 @@ const TopControls = ({
     if (bgLongPressTimer.current) {
       clearTimeout(bgLongPressTimer.current);
       bgLongPressTimer.current = null;
-      onCycleBackgroundColor();
+
+      // Only cycle color if long press didn't fire (i.e., it was a short press)
+      if (!bgLongPressFired.current) {
+        onCycleBackgroundColor();
+      }
     }
   };
 
   const handleTextPressIn = () => {
+    textLongPressFired.current = false;
     textLongPressTimer.current = setTimeout(() => {
+      textLongPressFired.current = true;
       onOpenTextColorMenu();
     }, 500);
   };
@@ -46,7 +56,11 @@ const TopControls = ({
     if (textLongPressTimer.current) {
       clearTimeout(textLongPressTimer.current);
       textLongPressTimer.current = null;
-      onCycleTextColor();
+
+      // Only cycle color if long press didn't fire (i.e., it was a short press)
+      if (!textLongPressFired.current) {
+        onCycleTextColor();
+      }
     }
   };
 

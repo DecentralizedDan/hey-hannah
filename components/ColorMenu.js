@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   TouchableOpacity,
@@ -34,6 +34,9 @@ const ColorMenu = ({
   onColumnSelect,
   onOpenShadeSelector,
 }) => {
+  // Memoize screen dimensions to prevent recalculation during render
+  const screenWidth = useMemo(() => Dimensions.get("window").width, []);
+
   if (!colorMenuVisible && !shadeMenuVisible) {
     return null;
   }
@@ -47,7 +50,7 @@ const ColorMenu = ({
             {
               translateY: colorMenuAnimation.interpolate({
                 inputRange: [0, 1],
-                outputRange: [Dimensions.get("window").width, 0], // Slide up from bottom in pixels
+                outputRange: [screenWidth, 0], // Slide up from bottom in pixels
               }),
             },
           ],
@@ -222,7 +225,7 @@ const ColorMenu = ({
                 style={[
                   styles.columnHighlight,
                   {
-                    left: (Dimensions.get("window").width / 9) * (highlightedColumn + 1), // Skip first column (arrows) in pixels
+                    left: (screenWidth / 9) * (highlightedColumn + 1), // Skip first column (arrows) in pixels
                   },
                 ]}
               />
