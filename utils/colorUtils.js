@@ -1,4 +1,4 @@
-import { ALL_SHADES } from "../constants/shades";
+import { ALL_SHADES } from "../constants/shades.js";
 
 /**
  * Get pre-computed 64 shades for a specific color type, organized as 8x8 grid
@@ -9,6 +9,12 @@ import { ALL_SHADES } from "../constants/shades";
 const generateShadesWithExistingColors = (baseColor, colorIndex) => {
   // Get the pre-computed 64 shades for this color type
   const shades = ALL_SHADES[colorIndex];
+
+  // Add safety check
+  if (!shades) {
+    console.error("Invalid colorIndex:", colorIndex, "Available indices: 0-7");
+    return [];
+  }
 
   // Organize into 8x8 grid (8 rows of 8 shades each)
   const shadeGrid = [];

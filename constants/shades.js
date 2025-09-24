@@ -138,72 +138,24 @@ const ORANGE_SHADES = [
 ];
 
 // YELLOW shades (64 colors from darkest to lightest)
+// YELLOW shades (64 colors from darkest to lightest)
+// YELLOW shades (64 colors from darkest to lightest)
+// YELLOW shades (64 colors from darkest to lightest)
+// YELLOW shades (64 colors from darkest to lightest)
 const YELLOW_SHADES = [
-  "#000000",
-  "#080700",
-  "#100e00",
-  "#181500",
-  "#201c00",
-  "#282300",
-  "#312a00",
-  "#393100",
-  "#413800",
-  "#493f00",
-  "#514600",
-  "#594d00",
-  "#615400",
-  "#695b00",
-  "#716200",
-  "#796900",
-  "#827000",
-  "#8a7700",
-  "#927e00",
-  "#9a8500",
-  "#a28c00",
-  "#aa9300",
-  "#b29a00",
-  "#baa100",
-  "#c2a800",
-  "#caaf00",
-  "#d2b600",
-  "#dbbd00",
-  "#e3c400",
-  "#ebcb00",
-  "#f3d200",
-  "#998800",
-  "#ffde04",
-  "#ffdf0c",
-  "#ffe014",
-  "#ffe11c",
-  "#ffe224",
-  "#ffe32d",
-  "#ffe435",
-  "#ffe53d",
-  "#ffe645",
-  "#ffe74d",
-  "#DDAA33",
-  "#ffe95d",
-  "#ffea65",
-  "#ffec6d",
-  "#ffed75",
-  "#ffee7d",
-  "#ffef86",
-  "#fff08e",
-  "#fff196",
-  "#FFDD00",
-  "#CCFF00",
-  "#FFD56B",
-  "#fff5b6",
-  "#fff6be",
-  "#FFFF00",
-  "#fff9ce",
-  "#fffad7",
-  "#FFF5AA",
-  "#fffce7",
-  "#fffdef",
-  "#fffef7",
-  "#ffffff",
+  "#000000", "#080700", "#100e00", "#181500", "#201c00", "#282300", "#312a00", "#393100",
+  "#413800", "#493f00", "#514600", "#594d00", "#615400", "#695b00", "#716200", "#796900",
+  "#827000", "#8a7700", "#927e00", "#9a8500", "#998800", "#a28c00", "#aa9300", "#b29a00",
+  "#baa100", "#c2a800", "#caaf00", "#d2b600", "#DDAA33", "#dbbd00", "#e3c400", "#ebcb00",
+  "#f3d200", "#fbd900", "#FFDD00", "#ffde04", "#ffdf0c", "#ffe014", "#FFD93D", "#CCFF00",
+  "#ffe11c", "#ffe224", "#FFD56B", "#ffe32d", "#ffe435", "#ffe53d", "#ffe645", "#ffe74d",
+  "#ffe855", "#ffe95d", "#ffea65", "#FFFF00", "#ffec6d", "#ffed75", "#ffee7d", "#ffef86",
+  "#fff08e", "#fff196", "#fff29e", "#fff3a6", "#fff4ae", "#FFF5AA", "#fff5b6", "#fff6be",
 ];
+
+
+
+
 
 // GREEN shades (64 colors from darkest to lightest)
 const GREEN_SHADES = [
@@ -410,72 +362,26 @@ const PURPLE_SHADES = [
 ];
 
 // WHITE shades (64 colors from darkest to lightest)
+// WHITE shades (64 colors from darkest to lightest)
+// WHITE shades (64 colors from darkest to lightest)
+// WHITE shades (64 colors from darkest to lightest)
+// WHITE shades (64 colors from darkest to lightest)
+// WHITE shades (64 colors from darkest to lightest)
 const WHITE_SHADES = [
-  "#000000",
-  "#080808",
-  "#101010",
-  "#181818",
-  "#202020",
-  "#282828",
-  "#313131",
-  "#393939",
-  "#414141",
-  "#494949",
-  "#515151",
-  "#595959",
-  "#616161",
-  "#696969",
-  "#717171",
-  "#797979",
-  "#828282",
-  "#8a8a8a",
-  "#929292",
-  "#9a9a9a",
-  "#a2a2a2",
-  "#aaaaaa",
-  "#b2b2b2",
-  "#bababa",
-  "#c2c2c2",
-  "#cacaca",
-  "#d2d2d2",
-  "#dbdbdb",
-  "#e3e3e3",
-  "#ebebeb",
-  "#f3f3f3",
-  "#fbfbfb",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#ffffff",
-  "#F5F0EA",
-  "#ffffff",
-  "#F7F7F7",
-  "#FFF8F0",
-  "#FFFFFF",
+  "#202020", "#252525", "#2a2a2a", "#363636", "#3d3d3d", "#444444", "#4a4a4a", "#4f4f4f",
+  "#545454", "#595959", "#5d5d5d", "#626262", "#666666", "#6a6a6a", "#6e6e6e", "#727272",
+  "#767676", "#7a7a7a", "#7d7d7d", "#818181", "#858585", "#888888", "#8c8c8c", "#8f8f8f",
+  "#929292", "#969696", "#999999", "#9c9c9c", "#9f9f9f", "#a2a2a2", "#a5a5a5", "#a9a9a9",
+  "#acacac", "#afafaf", "#b2b2b2", "#b5b5b5", "#b7b7b7", "#bababa", "#bdbdbd", "#c0c0c0",
+  "#c3c3c3", "#c6c6c6", "#c9c9c9", "#cbcbcb", "#cecece", "#d1d1d1", "#d3d3d3", "#d6d6d6",
+  "#d9d9d9", "#dbdbdb", "#dedede", "#e1e1e1", "#e3e3e3", "#e6e6e6", "#e8e8e8", "#ebebeb",
+  "#eeeeee", "#f0f0f0", "#F5F0EA", "#F7F7F7", "#FFF8F0", "#F0FDFF", "#FEFEFE", "#FFFFFF",
 ];
+
+
+
+
+
 
 // BLACK shades (64 colors from darkest to lightest)
 const BLACK_SHADES = [
