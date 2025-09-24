@@ -31,6 +31,85 @@ import { BlackOpsOne_400Regular } from "@expo-google-fonts/black-ops-one";
 import { Quicksand_400Regular } from "@expo-google-fonts/quicksand";
 // Using FileSystem for simple JSON storage
 
+/**
+ * Generates a meaningful filename based on text content with date and time
+ * @param {string} text - The text content to base the filename on
+ * @param {Array} existingFilenames - Array of existing filenames to avoid duplicates
+ * @returns {string} - Generated filename with .jpg extension
+ */
+const generateFilename = (text, existingFilenames = []) => {
+  // Generate date string in DD-MM-YYYY format
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0"); // Day in DD format
+  const month = String(now.getMonth() + 1).padStart(2, "0"); // Month in MM format
+  const year = now.getFullYear(); // Year in YYYY format
+  const dateString = `${day}-${month}-${year}`;
+
+  if (!text || text.trim() === "") {
+    const timestamp = Date.now();
+    return `text-image-${timestamp}-${dateString}.jpg`;
+  }
+
+  // Clean and process the text for filename
+  let cleanText = text
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "") // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .substring(0, 40); // Limit to 40 characters to leave room for date
+
+  // If after cleaning we have no valid characters, fall back to timestamp
+  if (cleanText === "") {
+    const timestamp = Date.now();
+    return `text-image-${timestamp}-${dateString}.jpg`;
+  }
+
+  let baseFilename = `${cleanText}-${dateString}`;
+  let filename = `${baseFilename}.jpg`;
+  let counter = 2; // Start counter at 2 for duplicates (first duplicate is the 2nd file)
+
+  // Check for duplicates and add incremental number if needed
+  while (existingFilenames.includes(filename)) {
+    filename = `${cleanText}-${dateString}-${counter}.jpg`;
+    counter++;
+  }
+
+  return filename;
+};
+
+/**
+ * Saves a captured image with a meaningful filename for sharing
+ * @param {string} capturedUri - The URI of the captured image
+ * @param {string} text - The text content to base the filename on
+ * @param {Array} existingFilenames - Array of existing filenames to avoid duplicates
+ * @returns {string} - Path to the saved file with meaningful filename
+ */
+const saveImageForSharing = async (capturedUri, text, existingFilenames = []) => {
+  try {
+    const meaningfulFilename = generateFilename(text, existingFilenames);
+    const shareDir = FileSystem.cacheDirectory + "share/";
+
+    // Ensure share directory exists
+    const dirInfo = await FileSystem.getInfoAsync(shareDir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(shareDir, { intermediates: true });
+    }
+
+    const finalPath = shareDir + meaningfulFilename;
+
+    // Copy the captured image to the new location with meaningful filename
+    await FileSystem.copyAsync({
+      from: capturedUri,
+      to: finalPath,
+    });
+
+    return finalPath;
+  } catch (error) {
+    console.error("Error saving image for sharing:", error);
+    return capturedUri; // Fall back to original URI
+  }
+};
+
 const COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "white", "black"];
 
 // Legacy COLOR_VALUES for backward compatibility
@@ -66,10 +145,10 @@ const ALL_COLORS = [
   ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
 
   // 6: Jewel tones palette
-  ["#990033", "#CC4400", "#998800", "#004D66", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
+  ["#990033", "#CC4400", "#998800", "#006600", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
 
   // 7: Toxic/Garish palette
-  ["#FF0080", "#FF6600", "#CCFF00", "#00FF80", "#0080FF", "#8000FF", "#FFFFFF", "#000000"],
+  ["#FF0080", "#FF6600", "#CCFF00", "#00FF40", "#0080FF", "#8000FF", "#FFFFFF", "#000000"],
 ];
 
 const GOLDEN_COLOR = "#FFCC02";
@@ -109,7 +188,7 @@ function AppContent() {
   const [bgColorMode, setBgColorMode] = useState("palette"); // "palette" or "variations"
   const [bgColorModeSelection, setBgColorModeSelection] = useState(0); // 0-7 (palette or variation index)
   const [textColorMode, setTextColorMode] = useState("palette"); // "palette" or "variations"
-  const [textColorModeSelection, setTextColorModeSelection] = useState(0); // 0-7 (palette or variation index)
+  const [textColorModeSelection, setTextColorModeSelection] = useState(6); // 0-7 (palette or variation index)
 
   // Color selection menu state
   const [colorMenuVisible, setColorMenuVisible] = useState(false);
@@ -125,7 +204,7 @@ function AppContent() {
     bgColorMode: "palette",
     bgColorModeSelection: 0,
     textColorMode: "palette",
-    textColorModeSelection: 0,
+    textColorModeSelection: 6,
     highlightedRow: -1,
     highlightedColumn: -1,
   });
@@ -191,6 +270,9 @@ function AppContent() {
 
   // Color menu functions
   const openColorMenu = (type) => {
+    // Dismiss keyboard if it's open
+    Keyboard.dismiss();
+
     setColorMenuType(type);
     setColorMenuVisible(true);
 
@@ -756,9 +838,10 @@ function AppContent() {
 
   const createNewImage = async (uri, galleryDir) => {
     // Create permanent file
-    const timestamp = Date.now();
-    const filename = `text-image-${timestamp}.jpg`;
+    const existingFilenames = galleryImages.map((img) => img.filename);
+    const filename = generateFilename(text, existingFilenames);
     const permanentPath = galleryDir + filename;
+    const timestamp = Date.now();
 
     await FileSystem.copyAsync({
       from: uri,
@@ -841,10 +924,11 @@ function AppContent() {
             if (__DEV__) console.warn("Could not delete old image file:", deleteError);
           }
 
-          // Create new file with current timestamp
-          const timestamp = Date.now();
-          const filename = `text-image-${timestamp}.jpg`;
+          // Create new file with meaningful filename
+          const existingFilenames = galleryImages.map((img) => img.filename);
+          const filename = generateFilename(text, existingFilenames);
           const permanentPath = galleryDir + filename;
+          const timestamp = Date.now();
 
           await FileSystem.copyAsync({
             from: uri,
@@ -1095,11 +1179,12 @@ function AppContent() {
       const imageToDuplicate = galleryImages.find((img) => img.id === imageId);
       if (!imageToDuplicate) return;
 
-      // Create new metadata with current timestamp and date
-      const timestamp = Date.now();
-      const filename = `text-image-${timestamp}.jpg`;
+      // Create new metadata with meaningful filename
+      const existingFilenames = galleryImages.map((img) => img.filename);
+      const filename = generateFilename(imageToDuplicate.text, existingFilenames);
       const galleryDir = FileSystem.documentDirectory + "gallery/";
       const permanentPath = galleryDir + filename;
+      const timestamp = Date.now();
 
       // Copy the image file
       const fileInfo = await FileSystem.getInfoAsync(imageToDuplicate.path);
@@ -1227,7 +1312,11 @@ function AppContent() {
       });
 
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
+        // Save the captured image with meaningful filename
+        const existingFilenames = galleryImages.map((img) => img.filename);
+        const shareUri = await saveImageForSharing(uri, text, existingFilenames);
+
+        await Sharing.shareAsync(shareUri, {
           mimeType: "image/jpeg",
           dialogTitle: "Share your text image",
         });
@@ -1537,7 +1626,11 @@ function AppContent() {
           });
 
           if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, {
+            // Save the captured image with meaningful filename
+            const existingFilenames = galleryImages.map((img) => img.filename);
+            const shareUri = await saveImageForSharing(uri, text, existingFilenames);
+
+            await Sharing.shareAsync(shareUri, {
               mimeType: "image/jpeg",
               dialogTitle: "Share your text image",
             });
@@ -2209,16 +2302,32 @@ function AppContent() {
                       const fileInfo = await FileSystem.getInfoAsync(imageToShare.path);
                       let shareUri = imageToShare.path;
 
-                      if (!fileInfo.exists) {
+                      if (fileInfo.exists) {
+                        // File exists, save it with meaningful filename for sharing
+                        const existingFilenames = galleryImages.map((img) => img.filename);
+                        shareUri = await saveImageForSharing(
+                          imageToShare.path,
+                          imageToShare.text,
+                          existingFilenames
+                        );
+                      } else {
                         // File doesn't exist, recreate by restoring the image and capturing it
                         restoreImageFromGallery(imageToShare);
 
                         // Wait a moment for the image to render, then capture it
                         await new Promise((resolve) => setTimeout(resolve, 100));
-                        shareUri = await captureRef(captureTextRef, {
+                        const capturedUri = await captureRef(captureTextRef, {
                           format: "jpg",
                           quality: 1.0,
                         });
+
+                        // Save the captured image with meaningful filename
+                        const existingFilenames = galleryImages.map((img) => img.filename);
+                        shareUri = await saveImageForSharing(
+                          capturedUri,
+                          imageToShare.text,
+                          existingFilenames
+                        );
                       }
 
                       await Sharing.shareAsync(shareUri, {
