@@ -1,21 +1,10 @@
-{
-  "expo": {
-    "name": "Hey Hannah",
-    "slug": "hey-hannah",
-    "version": "1.2.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.heyhannah.app",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "deploymentTarget": "13.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
