@@ -712,9 +712,9 @@ function AppContent() {
       filename,
       path: permanentPath,
       text: text, // Full text content
-      backgroundColor: COLORS[backgroundColorIndex],
+      backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
       backgroundColorIndex,
-      textColor: COLORS[textColorIndex],
+      textColor: currentTextColor, // Use actual current color (including shades)
       textColorIndex,
       alignment,
       fontFamily,
@@ -806,9 +806,9 @@ function AppContent() {
             filename,
             path: permanentPath,
             text: text, // Full text content
-            backgroundColor: COLORS[backgroundColorIndex],
+            backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
             backgroundColorIndex,
-            textColor: COLORS[textColorIndex],
+            textColor: currentTextColor, // Use actual current color (including shades)
             textColorIndex,
             alignment,
             fontFamily,
@@ -1660,6 +1660,8 @@ function AppContent() {
                 activeImageId={activeImageId}
                 backgroundColorIndex={backgroundColorIndex}
                 textColorIndex={textColorIndex}
+                currentBackgroundColor={currentBackgroundColor}
+                currentTextColor={currentTextColor}
                 alignment={alignment}
                 fontFamily={fontFamily}
                 fontSize={fontSize}

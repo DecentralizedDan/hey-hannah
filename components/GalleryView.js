@@ -9,6 +9,8 @@ const GalleryView = ({
   activeImageId,
   backgroundColorIndex,
   textColorIndex,
+  currentBackgroundColor,
+  currentTextColor,
   alignment,
   fontFamily,
   fontSize,
@@ -52,7 +54,9 @@ const GalleryView = ({
                         {
                           backgroundColor:
                             activeImageId === image.id
-                              ? COLORS[backgroundColorIndex]
+                              ? currentBackgroundColor
+                              : image.backgroundColor.startsWith("#")
+                              ? image.backgroundColor
                               : COLOR_VALUES[image.backgroundColor],
                         },
                       ]}
@@ -63,7 +67,9 @@ const GalleryView = ({
                           {
                             color:
                               activeImageId === image.id
-                                ? COLORS[textColorIndex]
+                                ? currentTextColor
+                                : image.textColor.startsWith("#")
+                                ? image.textColor
                                 : COLOR_VALUES[image.textColor],
                             fontSize:
                               (activeImageId === image.id ? fontSize : image.fontSize) * 0.21, // Precisely tuned to match original character density
