@@ -127,6 +127,8 @@ function AppContent() {
   const [isHoldingNew, setIsHoldingNew] = useState(false); // Track if new button is being held
   const [deletedText, setDeletedText] = useState(""); // Store deleted text for undo functionality
   const [showUndo, setShowUndo] = useState(false); // Track if undo option should be shown
+  const [previousImageState, setPreviousImageState] = useState(null); // Store previous image state for Back functionality
+  const [isInNewImageMode, setIsInNewImageMode] = useState(false); // Track if user is in new image mode
   const textInputRef = React.useRef(null);
   const textAreaRef = useRef(null);
   const captureTextRef = useRef(null);
@@ -834,6 +836,8 @@ function AppContent() {
     setFontFamily(0); // default font
     setStartedWriting(false);
     setActiveImageId(null);
+    setIsInNewImageMode(false); // Reset new image mode when restoring from gallery
+    setPreviousImageState(null); // Clear any previous image state
 
     // Switch to create view with clean state
     setCurrentView("create");
@@ -928,10 +932,24 @@ function AppContent() {
     setStartedWriting(false);
     setIsPreviewMode(false);
     setActiveImageId(null);
+    setIsInNewImageMode(false); // Reset new image mode when going to edit view
+    setPreviousImageState(null); // Clear any previous image state
     setCurrentView("create");
   };
 
   const handleNewImage = async () => {
+    // Store current image state before creating new image
+    setPreviousImageState({
+      text,
+      backgroundColorIndex,
+      textColorIndex,
+      alignment,
+      fontFamily,
+      fontSize,
+      previewHeight,
+      activeImageId,
+    });
+
     const saved = await saveToGallery();
     if (saved) {
       // Reset to blank state
@@ -945,6 +963,24 @@ function AppContent() {
       setStartedWriting(false);
       setIsPreviewMode(false);
       setActiveImageId(null); // Clear active image tracking
+      setIsInNewImageMode(true); // Set new image mode flag
+    }
+  };
+
+  const handleBackImage = () => {
+    if (previousImageState) {
+      // Restore previous image state
+      setText(previousImageState.text);
+      setBackgroundColorIndex(previousImageState.backgroundColorIndex);
+      setTextColorIndex(previousImageState.textColorIndex);
+      setAlignment(previousImageState.alignment);
+      setFontFamily(previousImageState.fontFamily);
+      setFontSize(previousImageState.fontSize);
+      setPreviewHeight(previousImageState.previewHeight);
+      setActiveImageId(previousImageState.activeImageId);
+      setStartedWriting(previousImageState.text.length > 0);
+      setIsInNewImageMode(false); // Exit new image mode
+      setPreviousImageState(null); // Clear stored state
     }
   };
 
@@ -1491,11 +1527,13 @@ function AppContent() {
                 activeImageId={activeImageId}
                 gallerySortMode={gallerySortMode}
                 isHoldingNew={isHoldingNew}
+                isInNewImageMode={isInNewImageMode}
                 onGalleryView={handleGalleryView}
                 onNewImage={handleNewImage}
                 onNewPressIn={handleNewPressIn}
                 onNewPressOut={handleNewPressOut}
                 onUndo={handleUndo}
+                onBackImage={handleBackImage}
                 onToggleGallerySortMode={toggleGallerySortMode}
                 onEditView={handleEditView}
               />

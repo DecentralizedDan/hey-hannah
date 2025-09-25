@@ -11,11 +11,13 @@ const NavigationBar = ({
   activeImageId,
   gallerySortMode,
   isHoldingNew,
+  isInNewImageMode,
   onGalleryView,
   onNewImage,
   onNewPressIn,
   onNewPressOut,
   onUndo,
+  onBackImage,
   onToggleGallerySortMode,
   onEditView,
 }) => {
@@ -25,24 +27,36 @@ const NavigationBar = ({
         <TouchableOpacity onPress={onGalleryView}>
           <Text style={styles.navigationText}>Gallery</Text>
         </TouchableOpacity>
-        {startedWriting && text.trim() && !showUndo && (
-          <Pressable onPress={onNewImage} onPressIn={onNewPressIn} onPressOut={onNewPressOut}>
-            <Text
-              style={[
-                styles.navigationText,
-                {
-                  backgroundColor: isHoldingNew ? "rgba(255, 204, 2, 0.2)" : "transparent",
-                },
-              ]}
-            >
-              New
-            </Text>
-          </Pressable>
-        )}
-        {showUndo && (
-          <TouchableOpacity onPress={onUndo}>
-            <Text style={styles.navigationText}>Undo</Text>
+
+        {/* Show Back button when in new image mode, otherwise show New button */}
+        {isInNewImageMode ? (
+          <TouchableOpacity onPress={onBackImage}>
+            <Text style={styles.navigationText}>Back</Text>
           </TouchableOpacity>
+        ) : (
+          <>
+            {/* Show New button when user has started writing and not showing undo */}
+            {startedWriting && text.trim() && !showUndo && (
+              <Pressable onPress={onNewImage} onPressIn={onNewPressIn} onPressOut={onNewPressOut}>
+                <Text
+                  style={[
+                    styles.navigationText,
+                    {
+                      backgroundColor: isHoldingNew ? "rgba(255, 204, 2, 0.2)" : "transparent",
+                    },
+                  ]}
+                >
+                  New
+                </Text>
+              </Pressable>
+            )}
+            {/* Show Undo button when applicable */}
+            {showUndo && (
+              <TouchableOpacity onPress={onUndo}>
+                <Text style={styles.navigationText}>Undo</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
     );
