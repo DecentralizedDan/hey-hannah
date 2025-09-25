@@ -12,3 +12,4 @@ const testResult = testAllShades();
 
 // Exit with appropriate code
 process.exit(testResult.success ? 0 : 1);
+

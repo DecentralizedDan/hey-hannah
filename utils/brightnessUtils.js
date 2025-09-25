@@ -53,3 +53,4 @@ function orderColorsByBrightness(colors, direction = "darkest-to-lightest") {
 }
 
 export { calculateLuminance, orderColorsByBrightness };
+
