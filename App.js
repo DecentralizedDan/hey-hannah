@@ -180,31 +180,10 @@ function AppContent() {
       type === "background" ? bgColorModeSelection : textColorModeSelection;
     const currentColorMode = type === "background" ? bgColorMode : textColorMode;
 
-    // If it's a custom palette (index >= ALL_COLORS.length) and in palette mode, open shade selector directly
-    if (currentColorMode === "palette" && currentPaletteIndex >= ALL_COLORS.length) {
-      const customPalette = getPalette(currentPaletteIndex);
-      const currentColorIndex = type === "background" ? backgroundColorIndex : textColorIndex;
-      const currentColor = customPalette[currentColorIndex];
-
-      // Find the correct color index in the COLORS array by matching the color
-      // This ensures shades are generated for the right color type (red=0, orange=1, yellow=2, etc.)
-      // rather than using the position within the custom palette
-      let correctColorIndex = 0;
-      let found = false;
-      for (let i = 0; i < COLORS.length && !found; i++) {
-        for (let j = 0; j < ALL_COLORS.length; j++) {
-          if (ALL_COLORS[j][i] === currentColor) {
-            correctColorIndex = i;
-            found = true;
-            break;
-          }
-        }
-      }
-
-      // Open shade selector directly for the current color with correct index
-      openShadeSelector(currentColor, correctColorIndex);
-      return;
-    }
+    // Note: Removed automatic shade selector opening for custom palettes
+    // Users should be able to access the color palette menu even when using custom palettes
+    // to switch to different palettes. Shade selector should only open when explicitly
+    // long-pressing individual colors, not when long-pressing the BG/Text buttons.
 
     // Dismiss keyboard if it's open
     Keyboard.dismiss();
