@@ -1,0 +1,334 @@
+Manual Test Flow for Hey Hannah App
+====================================
+
+PURPOSE
+-------
+This document provides a lightweight but thorough manual testing framework for the Hey Hannah text-to-image app. The test flow covers all major features, edge cases, and user workflows to ensure quality and functionality.
+
+TEST PREREQUISITES
+------------------
+- iOS device with Hey Hannah app installed
+- App permissions granted (photo library access, media library)
+- Device storage available for image saving
+- Clean slate: Delete existing gallery images or note existing count
+
+CORE FEATURE TESTING
+====================
+
+1. BASIC TEXT CREATION AND STYLING
+----------------------------------
+
+1.1 Text Input
+- Open app
+- Verify placeholder shows "Say something..."
+- Type text: "Hello World Testing"
+- Verify text appears with default styling (yellow background, blue text, left aligned)
+- Verify font size decreases as text length increases past 300 characters
+
+1.2 Background Color Controls
+- Tap BG button multiple times
+- Verify background cycles through all 8 colors (red, orange, yellow, green, blue, purple, white, black)
+- Long press BG button
+- Verify color selection menu opens with 8x8 color grid
+- Test palette selection (left radio buttons)
+- Test color variation selection (top radio buttons)
+- Test direct color selection
+- Test exit button (X) and tap outside to close
+
+1.3 Text Color Controls
+- Tap TEXT button multiple times
+- Verify text cycles through all 8 colors
+- Long press TEXT button
+- Verify color menu opens for text colors
+- Test all selection modes same as background colors
+- Verify text and background can use different palettes
+
+1.4 Font Family Controls
+- Tap FONT button multiple times
+- Verify font cycles through: System, Courgette, Permanent Marker, Black Ops One, Quicksand
+- Verify text appearance changes with each font
+
+1.5 Text Alignment
+- Tap ALIGN button multiple times
+- Verify alignment cycles: left → center → right → left
+- Verify text position changes in preview
+
+2. ADVANCED COLOR FEATURES
+---------------------------
+
+2.1 Shade Selection Menu
+- Open color selection menu (long press BG or TEXT)
+- Long press any color square
+- Verify shade menu opens with 8x8 shade grid
+- Test row selection (left radio buttons)
+- Test column selection (top radio buttons)
+- Test direct shade selection
+- Test back arrow to return to color menu
+- Verify original menu state restored
+
+2.2 Custom Palette Creation
+- In shade menu, select entire row or column
+- Verify custom palette created
+- Return to main interface
+- Test color cycling uses new custom palette
+- Verify custom palettes persist in saved images
+
+3. TEXT SIZING FEATURES
+-----------------------
+
+3.1 Text Size Controls
+- Tap SIZE button multiple times
+- Verify size cycles: S (small) → M (medium) → L (large) → S
+- Type new text with different sizes selected
+- Verify new text uses currently selected size
+
+3.2 Text Selection and Sizing
+- Type mixed text: "Small medium large text"
+- Highlight portion of text
+- Change size using SIZE button
+- Verify selected text changes size
+- Test with multiple selections and different sizes
+- Verify formatted text displays correctly in viewing mode
+
+3.3 Dual-Mode Text Editing
+- Type formatted text with mixed sizes
+- Tap outside text area or dismiss keyboard
+- Verify viewing mode shows formatted text
+- Tap formatted text to re-enter editing mode
+- Verify TextInput allows continued editing
+
+4. PREVIEW AND EXPORT FUNCTIONALITY
+-----------------------------------
+
+4.1 Preview Mode
+- Create styled text
+- Tap PREVIEW button
+- Verify preview overlay appears with formatted text
+- Verify header shows EDIT and SHARE buttons
+- Tap outside preview to exit
+- Verify returns to create view
+
+4.2 Hold-to-Copy Feature
+- Create text
+- Hold PREVIEW button for 750ms
+- Verify haptic feedback occurs
+- Verify image copied to clipboard
+- Check clipboard in another app
+
+4.3 Share Functionality
+- Tap SHARE button in preview mode
+- Verify iOS share sheet appears
+- Test sharing to different apps
+- Verify shared image includes watermark
+
+5. GALLERY MANAGEMENT
+--------------------
+
+5.1 Gallery View Navigation
+- Create and save several images
+- Tap gallery icon (folder) in top navigation
+- Verify gallery view shows saved images
+- Verify newest images appear first
+- Test edit button to return to create view
+
+5.2 Sort Modes
+- In gallery view, tap sort button
+- Verify sort mode cycles: newest → oldest → favorites → random
+- Verify image order changes appropriately
+- Test with different numbers of images
+
+5.3 Image Actions
+- Long press gallery image
+- Verify action sheet appears with options:
+  - Preview
+  - Favorite/Unfavorite
+  - Copy
+  - Duplicate
+  - Share
+  - Delete
+- Test each action thoroughly
+
+5.4 Image Editing from Gallery
+- Select image from gallery
+- Verify creates view opens with image content
+- Modify text, colors, or formatting
+- Verify changes save automatically
+- Return to gallery and verify thumbnail updated
+
+6. AUTO-SAVE AND DATA PERSISTENCE
+---------------------------------
+
+6.1 Auto-Save Behavior
+- Create new image
+- Switch to gallery view
+- Verify image auto-saved
+- Create new image
+- Close app and reopen
+- Verify unsaved work persisted
+
+6.2 Image Restoration
+- Save image with complex formatting (mixed sizes, custom colors)
+- Navigate to gallery
+- Select image for editing
+- Verify all formatting restored exactly
+- Test with multiple complex images
+
+6.3 Backward Compatibility
+- If testing updated app version:
+  - Verify old images load correctly
+  - Verify old text-only format converts to new format
+  - Verify no data loss
+
+7. NEW IMAGE WORKFLOW
+--------------------
+
+7.1 New Image Creation
+- Create and save an image
+- Tap NEW button
+- Verify new blank canvas appears
+- Verify previous image accessible via back functionality
+
+7.2 Hold-to-Delete Feature
+- Type text
+- Hold NEW button for 750ms
+- Verify haptic feedback
+- Verify text cleared and undo option appears
+- Test undo functionality
+
+7.3 Back Navigation
+- Create new image after saving previous
+- Tap back arrow (if visible)
+- Verify returns to previous image state
+
+8. PERFORMANCE AND STABILITY
+----------------------------
+
+8.1 Memory Management
+- Create 20+ images rapidly
+- Monitor app performance
+- Verify no crashes or slowdowns
+- Check device storage usage
+
+8.2 Large Text Handling
+- Type very long text (1000+ characters)
+- Verify app remains responsive
+- Test all features with long text
+- Verify image capture works correctly
+
+8.3 Rapid Interaction Testing
+- Rapidly tap color buttons
+- Quickly open/close menus
+- Fast text typing and editing
+- Verify no UI glitches or crashes
+
+EDGE CASES AND ERROR SCENARIOS
+==============================
+
+9. BOUNDARY CONDITIONS
+----------------------
+
+9.1 Empty States
+- Test preview with no text
+- Test save with no text
+- Test share with no text
+- Verify appropriate error messages
+
+9.2 Text Limits
+- Test maximum text length
+- Test with special characters, emoji
+- Test with different languages/scripts
+
+9.3 Storage Limits
+- Fill device storage nearly full
+- Attempt to save images
+- Verify graceful handling
+
+10. SYSTEM INTEGRATION
+---------------------
+
+10.1 Permissions
+- Revoke photo library permissions
+- Attempt to save to photos
+- Verify permission request appears
+- Test with permissions denied
+
+10.2 Background/Foreground
+- Start long operation (image save)
+- Background app immediately
+- Return to foreground
+- Verify operation completed correctly
+
+10.3 Memory Warnings
+- Open many other apps to trigger memory pressure
+- Return to Hey Hannah
+- Verify app state preserved
+- Test all functionality after memory warning
+
+11. ACCESSIBILITY AND USABILITY
+-------------------------------
+
+11.1 Gesture Recognition
+- Test all tap, long press, and swipe gestures
+- Verify appropriate feedback for each interaction
+- Test gesture conflicts (simultaneous touches)
+
+11.2 Visual Feedback
+- Verify all buttons provide visual feedback when pressed
+- Test highlight states for menu selections
+- Verify loading states during operations
+
+11.3 Error Recovery
+- Force quit app during save operation
+- Restart and verify data integrity
+- Test recovery from various error states
+
+ACCEPTANCE CRITERIA
+==================
+
+For each test section, verify:
+
+✅ Core Functionality
+- All features work as designed
+- User interactions produce expected results
+- Visual feedback appropriate and timely
+
+✅ Data Integrity
+- All styling information preserved in saved images
+- No data loss during app transitions
+- Backward compatibility maintained
+
+✅ Performance
+- App remains responsive under normal use
+- No crashes or freezes during testing
+- Memory usage reasonable
+
+✅ User Experience
+- Intuitive navigation between features
+- Consistent visual design and behavior
+- Error states handled gracefully
+
+REPORTING ISSUES
+================
+
+For any failed tests, document:
+
+1. **Test Step**: Specific action that failed
+2. **Expected Behavior**: What should have happened
+3. **Actual Behavior**: What actually happened
+4. **Reproduction Steps**: Exact steps to reproduce
+5. **Device Info**: iOS version, device model
+6. **App Version**: Build number and version
+7. **Frequency**: Always, sometimes, once
+
+REGRESSION TESTING
+==================
+
+After any app updates, prioritize testing:
+
+1. **Core Workflows**: Text creation → styling → saving → gallery
+2. **Data Migration**: Existing saved images load correctly
+3. **New Features**: Any newly added functionality
+4. **Critical Paths**: Features used by most users daily
+5. **Previous Bugs**: Areas where issues were fixed
+
+This manual test flow ensures comprehensive coverage of the Hey Hannah app while remaining practical for regular testing cycles. Execute in order for systematic coverage, or focus on specific sections for targeted testing.
