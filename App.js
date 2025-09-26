@@ -45,6 +45,9 @@ import ShareModal from "./components/ShareModal";
 import TopControls from "./components/TopControls";
 import NavigationBar from "./components/NavigationBar";
 
+// Import version utilities
+import { getVersionInfo } from "./utils/appVersion";
+
 function AppContent() {
   const insets = useSafeAreaInsets();
   const baseSize = 32; // font size in pixels
@@ -688,6 +691,7 @@ function AppContent() {
     });
 
     // Save metadata
+    const versionInfo = getVersionInfo();
     const metadata = {
       id: timestamp,
       filename,
@@ -703,6 +707,8 @@ function AppContent() {
       previewHeight,
       isFavorited: false,
       createdAt: new Date().toISOString(),
+      appVersion: versionInfo.appVersion, // App version that created this image
+      buildNumber: versionInfo.buildNumber, // Build number that created this image
     };
 
     // Update gallery list - add new images at the beginning so newest appears first
@@ -782,6 +788,7 @@ function AppContent() {
             existingImage.fontSize !== fontSize;
 
           // Update metadata with new timestamp and current date only if content changed
+          const versionInfo = getVersionInfo();
           const updatedMetadata = {
             ...existingImage,
             filename,
@@ -797,6 +804,8 @@ function AppContent() {
             previewHeight,
             isFavorited: existingImage.isFavorited || false, // Preserve favorite status
             createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
+            appVersion: versionInfo.appVersion, // App version that last edited this image
+            buildNumber: versionInfo.buildNumber, // Build number that last edited this image
           };
 
           // Replace the existing image in the array
@@ -838,6 +847,14 @@ function AppContent() {
     setActiveImageId(null);
     setIsInNewImageMode(false); // Reset new image mode when restoring from gallery
     setPreviousImageState(null); // Clear any previous image state
+
+    // Reset color management state to ensure proper color resolution
+    setBgColorMode("palette");
+    setBgColorModeSelection(0); // Use first palette as default
+    setTextColorMode("palette");
+    setTextColorModeSelection(0); // Use first palette as default
+    setSelectedShadeColor(null); // Clear any shade selections
+    setSelectedShadeType(null);
 
     // Switch to create view with clean state
     setCurrentView("create");
@@ -1136,49 +1153,33 @@ function AppContent() {
       // Set return view to gallery since preview was initiated from gallery
       setPreviewReturnView("gallery");
 
-      // First, restore the image to the editor (same as handleImageSelection but without auto-save)
-      // Reset all state to defaults first
-      setText("");
-      setBackgroundColorIndex(5); // default background
-      setTextColorIndex(3); // default text color
-      setAlignment(0); // default alignment
-      setFontFamily(0); // default font
-      setStartedWriting(false);
-      setActiveImageId(null);
+      // Use the fixed restoreImageFromGallery function to properly restore all state
+      restoreImageFromGallery(image);
 
-      // Restore the image data immediately
-      setText(image.text);
-      setBackgroundColorIndex(image.backgroundColorIndex);
-      setTextColorIndex(image.textColorIndex);
-      setAlignment(image.alignment);
-      setFontFamily(image.fontFamily);
-      setPreviewHeight(image.previewHeight);
-      setStartedWriting(true);
-      setActiveImageId(image.id);
+      // Switch to preview mode after restoration
+      setTimeout(() => {
+        setIsPreviewMode(true);
+        setIsTransitioning(false);
 
-      // Switch to create view and activate preview mode simultaneously
-      setCurrentView("create");
-      setIsPreviewMode(true);
-      setIsTransitioning(false);
+        // Calculate proper preview height after state is set
+        setTimeout(async () => {
+          try {
+            if (image.text.length > 0) {
+              // Wait a moment for text to render
+              await new Promise((resolve) => setTimeout(resolve, 200)); // Delay in milliseconds
+              const measuredHeight = await measureTextHeight();
+              const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
+              const watermarkHeight = 40; // Space for watermark and margin in pixels
+              const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
 
-      // Calculate proper preview height after state is set
-      setTimeout(async () => {
-        try {
-          if (image.text.length > 0) {
-            // Wait a moment for text to render
-            await new Promise((resolve) => setTimeout(resolve, 200)); // Delay in milliseconds
-            const measuredHeight = await measureTextHeight();
-            const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-            const watermarkHeight = 40; // Space for watermark and margin in pixels
-            const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
-
-            setPreviewHeight(calculatedHeight);
+              setPreviewHeight(calculatedHeight);
+            }
+          } catch (error) {
+            if (__DEV__) console.error("Preview height calculation error:", error);
+            // Continue with existing preview height
           }
-        } catch (error) {
-          if (__DEV__) console.error("Preview height calculation error:", error);
-          // Continue with existing preview height
-        }
-      }, 100); // Small delay for height calculation
+        }, 100); // Small delay for height calculation
+      }, 100); // Wait for restoreImageFromGallery to complete
     } catch (error) {
       if (__DEV__) console.error("Failed to preview image:", error);
       setIsTransitioning(false);
@@ -1674,15 +1675,6 @@ function AppContent() {
               /* Gallery view */
               <GalleryView
                 sortedGalleryImages={sortedGalleryImages}
-                activeImageId={activeImageId}
-                backgroundColorIndex={backgroundColorIndex}
-                textColorIndex={textColorIndex}
-                currentBackgroundColor={currentBackgroundColor}
-                currentTextColor={currentTextColor}
-                alignment={alignment}
-                fontFamily={fontFamily}
-                fontSize={fontSize}
-                text={text}
                 onImageSelection={handleImageSelection}
                 onImageActionSheet={showImageActionSheet}
               />
@@ -1930,8 +1922,48 @@ function AppContent() {
           // The menu will be closed manually by user or when they select a different color
         }}
         onRowSelect={(rowIndex) => {
+          // Generate the shade grid to get the complete row
+          let colorIndex = -1;
+          let found = false;
+          // Find which color position (0-7) the shadeMenuColor represents
+          for (let i = 0; i < 8 && !found; i++) {
+            for (let j = 0; j < ALL_COLORS.length; j++) {
+              if (ALL_COLORS[j][i] === shadeMenuColor) {
+                colorIndex = i;
+                found = true;
+                break;
+              }
+            }
+          }
+
+          const shadeGrid = generateShadesWithExistingColors(shadeMenuColor, colorIndex);
+          const selectedRow = shadeGrid[rowIndex];
+
+          // Save the selected row as a new custom palette
+          const newPaletteIndex = saveShadeRowAsPalette(selectedRow);
+
+          // Switch to the new custom palette
+          if (colorMenuType === "background") {
+            setBgColorMode("palette");
+            setBgColorModeSelection(newPaletteIndex);
+            // Use the first color in the row as default
+            setBackgroundColorIndex(0);
+          } else {
+            setTextColorMode("palette");
+            setTextColorModeSelection(newPaletteIndex);
+            // Use the first color in the row as default
+            setTextColorIndex(0);
+          }
+
+          // Update the current color with the first shade in the row
+          setSelectedShadeColor(selectedRow[0]);
+          setSelectedShadeType(colorMenuType);
+
+          // Highlight the selected row
           setHighlightedRow(rowIndex);
           setHighlightedColumn(-1);
+
+          // Don't close the shade menu - let user continue exploring shades
         }}
         onColumnSelect={(columnIndex) => {
           setHighlightedColumn(columnIndex);
