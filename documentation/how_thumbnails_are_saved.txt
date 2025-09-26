@@ -1,0 +1,159 @@
+How Preview Images Are Saved in Hey Hannah App
+==============================================
+
+Image Saving Process Overview
+
+1. Capture Setup - Always-Available Hidden Container
+---------------------------------------------------
+The app maintains a hidden capture container that's always rendered but invisible (lines 1463-1517 in App.js):
+
+```javascript
+{/* Always-available hidden capture container for saving */}
+<View style={[styles.captureContainer, {
+  position: "absolute",
+  opacity: 0,           // Always invisible
+  pointerEvents: "none", // Can't be interacted with
+  zIndex: -1000,        // Behind everything
+  backgroundColor: currentBackgroundColor,
+}]}>
+  <View ref={captureTextRef}>  {/* This is what gets captured */}
+    <Text style={[/* styled with current colors, fonts, etc */]}>
+      {text}
+    </Text>
+    <Text style={styles.watermark}>
+      made with Hey Hannah
+    </Text>
+  </View>
+</View>
+```
+
+2. Capture Trigger
+------------------
+When the user wants to save an image, the app calls saveToGallery() which:
+
+1. Captures the hidden container using captureRef(captureTextRef.current):
+```javascript
+const uri = await captureRef(captureTextRef.current, {
+  format: "jpg",
+  quality: 1.0,
+  result: "tmpfile",
+});
+```
+
+2. Creates the image file as a JPG with high quality to a temporary location
+
+3. File Storage
+---------------
+The captured image is then saved permanently:
+
+1. Generate meaningful filename using generateFilename() utility:
+   - Based on text content (first 40 characters, cleaned)
+   - Includes date in DD-MM-YYYY format
+   - Example: hello-world-25-09-2025.jpg
+   - Handles duplicates by adding incrementing numbers
+
+2. Copy to permanent location:
+```javascript
+const permanentPath = galleryDir + filename;
+await FileSystem.copyAsync({
+  from: uri,          // temporary capture
+  to: permanentPath,  // permanent gallery location
+});
+```
+
+3. Create metadata object with all the styling information:
+```javascript
+const versionInfo = getVersionInfo();
+const metadata = {
+  id: timestamp,
+  filename,
+  path: permanentPath,
+  text: text,                    // Full text content
+  backgroundColor: currentBackgroundColor,  // Actual hex color (e.g., "#FF3333")
+  backgroundColorIndex,          // Index in color palette
+  textColor: currentTextColor,   // Actual hex color
+  textColorIndex,               // Index in color palette
+  alignment,                    // 0=left, 1=center, 2=right
+  fontFamily,                   // Font index
+  fontSize,                     // Calculated font size
+  previewHeight,               // Calculated height for this image
+  isFavorited: false,
+  createdAt: new Date().toISOString(),
+  appVersion: versionInfo.appVersion,  // App version that created this image
+  buildNumber: versionInfo.buildNumber, // Build number that created this image
+};
+```
+
+4. Gallery Database Update
+--------------------------
+The metadata is stored in a JSON file:
+- Location: FileSystem.documentDirectory + "gallery/metadata.json"
+- Structure: Array of image metadata objects
+- Sorting: New images added at beginning (newest first)
+
+5. Key Features
+---------------
+
+Automatic Saving: 
+- Images are auto-saved when switching between gallery/editor
+- Images are auto-saved before creating new images
+- No manual save button needed
+
+Smart Filenames:
+- Based on actual text content
+- Include dates for organization
+- Handle duplicates intelligently
+
+Complete Style Preservation:
+- Both the actual colors (hex values) AND the color indices are saved
+- Font settings, alignment, text size all preserved
+- Preview height calculated and saved for consistent reproduction
+
+Version Tracking:
+- App version and build number recorded for each image creation and edit
+- Enables debugging and compatibility tracking across app updates
+- Helps identify which version of the app created or last modified each image
+
+Two Storage Systems:
+- Image files: Actual JPG files stored in gallery directory
+- Metadata: JSON file with all the styling and content information
+
+6. Rendering Logic
+------------------
+When displaying gallery thumbnails, the system:
+- Uses the saved backgroundColor and textColor hex values directly
+- Falls back to COLOR_VALUES lookup for legacy images
+- Scales font size down by 0.21x for thumbnail display
+- Uses all saved styling properties to ensure accurate previews
+
+This architecture ensures that every saved image is a perfect snapshot of how the text appeared when saved, with all styling preserved both in the visual file and the metadata for reconstruction.
+
+7. Complete Metadata Example
+----------------------------
+Here's what a typical saved image metadata object looks like:
+
+```json
+{
+  "id": 1695648151234,
+  "filename": "hello-world-25-09-2025.jpg",
+  "path": "/path/to/gallery/hello-world-25-09-2025.jpg",
+  "text": "Hello World!",
+  "backgroundColor": "#FFDD00",
+  "backgroundColorIndex": 2,
+  "textColor": "#3377FF",
+  "textColorIndex": 4,
+  "alignment": 1,
+  "fontFamily": 0,
+  "fontSize": 28,
+  "previewHeight": 450,
+  "isFavorited": false,
+  "createdAt": "2025-09-25T12:34:56.789Z",
+  "appVersion": "1.2.0",
+  "buildNumber": "11"
+}
+```
+
+Version Information Fields:
+- appVersion: Semantic version of the app (matches app.json version)
+- buildNumber: iOS build number (matches app.json ios.buildNumber)
+- Updated on both image creation and editing for full audit trail
