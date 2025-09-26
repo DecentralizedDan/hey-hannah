@@ -692,23 +692,29 @@ function AppContent() {
 
     // Save metadata
     const versionInfo = getVersionInfo();
+
+    // Get the complete palettes that were used for this image
+    const backgroundPalette = getPalette(bgColorModeSelection);
+    const textPalette = getPalette(textColorModeSelection);
+
     const metadata = {
       id: timestamp,
       filename,
       path: permanentPath,
       text: text, // Full text content
       backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
-      backgroundColorIndex,
+      backgroundPalette: backgroundPalette, // Complete palette array used for background
       textColor: currentTextColor, // Use actual current color (including shades)
-      textColorIndex,
+      textPalette: textPalette, // Complete palette array used for text
       alignment,
-      fontFamily,
+      fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
       fontSize,
       previewHeight,
       isFavorited: false,
       createdAt: new Date().toISOString(),
       appVersion: versionInfo.appVersion, // App version that created this image
       buildNumber: versionInfo.buildNumber, // Build number that created this image
+      os: "ios", // Operating system platform
     };
 
     // Update gallery list - add new images at the beginning so newest appears first
@@ -781,31 +787,37 @@ function AppContent() {
           // Check if content has actually changed
           const contentChanged =
             existingImage.text !== text ||
-            existingImage.backgroundColorIndex !== backgroundColorIndex ||
-            existingImage.textColorIndex !== textColorIndex ||
+            existingImage.backgroundColor !== currentBackgroundColor ||
+            existingImage.textColor !== currentTextColor ||
             existingImage.alignment !== alignment ||
-            existingImage.fontFamily !== fontFamily ||
+            existingImage.fontFamily !== FONT_FAMILIES[fontFamily] ||
             existingImage.fontSize !== fontSize;
 
           // Update metadata with new timestamp and current date only if content changed
           const versionInfo = getVersionInfo();
+
+          // Get the complete palettes that are being used for this image
+          const backgroundPalette = getPalette(bgColorModeSelection);
+          const textPalette = getPalette(textColorModeSelection);
+
           const updatedMetadata = {
             ...existingImage,
             filename,
             path: permanentPath,
             text: text, // Full text content
             backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
-            backgroundColorIndex,
+            backgroundPalette: backgroundPalette, // Complete palette array used for background
             textColor: currentTextColor, // Use actual current color (including shades)
-            textColorIndex,
+            textPalette: textPalette, // Complete palette array used for text
             alignment,
-            fontFamily,
+            fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
             fontSize,
             previewHeight,
             isFavorited: existingImage.isFavorited || false, // Preserve favorite status
             createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
             appVersion: versionInfo.appVersion, // App version that last edited this image
             buildNumber: versionInfo.buildNumber, // Build number that last edited this image
+            os: existingImage.os || "ios", // Preserve existing OS or default to ios
           };
 
           // Replace the existing image in the array
@@ -856,16 +868,61 @@ function AppContent() {
     setSelectedShadeColor(null); // Clear any shade selections
     setSelectedShadeType(null);
 
+    // If the image has saved palette data, try to restore the exact palette context
+    // For now, we'll use the saved hex colors and indices for backward compatibility
+    // The palette arrays provide context but don't need to be actively restored
+    // since the hex colors ensure perfect visual reproduction
+
     // Switch to create view with clean state
     setCurrentView("create");
 
     // Now restore the actual image data after the clean state is rendered
     setTimeout(() => {
       setText(imageData.text);
-      setBackgroundColorIndex(imageData.backgroundColorIndex);
-      setTextColorIndex(imageData.textColorIndex);
+
+      // Calculate color indices from the saved palettes and hex colors
+      let bgColorIndex = 0;
+      let textColorIndex = 0;
+
+      if (imageData.backgroundPalette && imageData.backgroundColor) {
+        const bgIndex = imageData.backgroundPalette.indexOf(imageData.backgroundColor);
+        if (bgIndex !== -1) {
+          bgColorIndex = bgIndex;
+        }
+      }
+
+      if (imageData.textPalette && imageData.textColor) {
+        const textIndex = imageData.textPalette.indexOf(imageData.textColor);
+        if (textIndex !== -1) {
+          textColorIndex = textIndex;
+        }
+      }
+
+      // Fall back to saved indices for backward compatibility with older images
+      if (imageData.backgroundColorIndex !== undefined && bgColorIndex === 0) {
+        bgColorIndex = imageData.backgroundColorIndex;
+      }
+      if (imageData.textColorIndex !== undefined && textColorIndex === 0) {
+        textColorIndex = imageData.textColorIndex;
+      }
+
+      // Calculate font family index from the saved font family name
+      let fontFamilyIndex = 0;
+      if (typeof imageData.fontFamily === "string") {
+        // New format: fontFamily is stored as string
+        const fontIndex = FONT_FAMILIES.indexOf(imageData.fontFamily);
+        if (fontIndex !== -1) {
+          fontFamilyIndex = fontIndex;
+        }
+      } else if (typeof imageData.fontFamily === "number") {
+        // Legacy format: fontFamily is stored as index (backward compatibility)
+        fontFamilyIndex = imageData.fontFamily;
+      }
+
+      setBackgroundColorIndex(bgColorIndex);
+      setTextColorIndex(textColorIndex);
       setAlignment(imageData.alignment);
-      setFontFamily(imageData.fontFamily);
+      setFontFamily(fontFamilyIndex);
       setPreviewHeight(imageData.previewHeight);
       setStartedWriting(true);
       setActiveImageId(imageData.id);
