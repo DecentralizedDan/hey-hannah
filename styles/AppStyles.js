@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Debug modal styles
+  // Info modal styles
   modalOverlay: {
     position: "absolute",
     top: 0,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1004, // Above all other modals
   },
-  debugModalContainer: {
+  infoModalContainer: {
     backgroundColor: "#FFFFFF", // White background
     borderRadius: 12, // Corner radius in pixels
     padding: 20, // Container padding in pixels
@@ -432,18 +432,18 @@ const styles = StyleSheet.create({
     width: "85%",
     maxHeight: "70%",
   },
-  debugModalHeader: {
+  infoModalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15, // Bottom margin in pixels
   },
-  debugModalTitle: {
+  infoModalTitle: {
     fontSize: 18, // Title text size in pixels
     fontWeight: "bold",
     color: "#000000", // Black text
   },
-  debugModalCloseButton: {
+  infoModalCloseButton: {
     padding: 8, // Button padding in pixels
     borderRadius: 15, // Corner radius in pixels
     backgroundColor: "#E0E0E0", // Light gray background
@@ -452,36 +452,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  debugModalCloseButtonText: {
+  infoModalCloseButtonText: {
     color: "#333333", // Dark gray text
     fontSize: 16, // Font size in pixels
     fontWeight: "bold",
   },
-  debugModalContent: {
+  infoModalContent: {
     maxHeight: "100%",
   },
-  debugField: {
+  infoField: {
     marginBottom: 12, // Bottom margin in pixels
     paddingBottom: 8, // Bottom padding in pixels
     borderBottomWidth: 1, // Border thickness in pixels
     borderBottomColor: "#E0E0E0", // Light gray border
   },
-  debugFieldLabel: {
+  infoFieldLabel: {
     fontSize: 14, // Label text size in pixels
     fontWeight: "600",
     color: "#666666", // Gray text
     marginBottom: 4, // Bottom margin in pixels
   },
-  debugFieldValue: {
+  infoFieldValue: {
     fontSize: 16, // Value text size in pixels
     color: "#000000", // Black text
     lineHeight: 20, // Line height in pixels
   },
-  debugFieldValueContainer: {
+  infoFieldValueContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  debugColorSquare: {
+  infoColorSquare: {
     width: 20, // Square width in pixels
     height: 20, // Square height in pixels
     marginRight: 8, // Right margin in pixels

@@ -42,6 +42,7 @@ import ColorMenu from "./components/ColorMenu";
 import GalleryView from "./components/GalleryView";
 import DeleteModal from "./components/DeleteModal";
 import ShareModal from "./components/ShareModal";
+import InfoModal from "./components/InfoModal";
 import TopControls from "./components/TopControls";
 import NavigationBar from "./components/NavigationBar";
 
@@ -122,8 +123,10 @@ function AppContent() {
   const [currentView, setCurrentView] = useState("create"); // 'create' or 'gallery'
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
   const [imageToShare, setImageToShare] = useState(null);
+  const [imageToInfo, setImageToInfo] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false); // 'newest', 'oldest', 'favorites', 'random'
   const [previewReturnView, setPreviewReturnView] = useState("create"); // Track which view to return to after preview
   const [isHoldingPreview, setIsHoldingPreview] = useState(false); // Track if preview button is being held
@@ -865,7 +868,7 @@ function AppContent() {
     setBgColorModeSelection(0); // Use first palette as default
     setTextColorMode("palette");
     setTextColorModeSelection(0); // Use first palette as default
-    setSelectedShadeColor(null); // Clear any shade selections
+    setSelectedShadeColor(null); // Clear any shade selections initially
     setSelectedShadeType(null);
 
     // If the image has saved palette data, try to restore the exact palette context
@@ -917,6 +920,39 @@ function AppContent() {
       } else if (typeof imageData.fontFamily === "number") {
         // Legacy format: fontFamily is stored as index (backward compatibility)
         fontFamilyIndex = imageData.fontFamily;
+      }
+
+      // Check if the saved colors are shade colors (not in the saved palettes)
+      let needsShadeRestoration = false;
+      let shadeColorToRestore = null;
+      let shadeTypeToRestore = null;
+
+      // Check background color
+      if (imageData.backgroundPalette && imageData.backgroundColor) {
+        const bgFoundInPalette = imageData.backgroundPalette.includes(imageData.backgroundColor);
+        if (!bgFoundInPalette) {
+          // Background color is a shade color, not in the palette
+          needsShadeRestoration = true;
+          shadeColorToRestore = imageData.backgroundColor;
+          shadeTypeToRestore = "background";
+        }
+      }
+
+      // Check text color (only if background wasn't already identified as shade)
+      if (!needsShadeRestoration && imageData.textPalette && imageData.textColor) {
+        const textFoundInPalette = imageData.textPalette.includes(imageData.textColor);
+        if (!textFoundInPalette) {
+          // Text color is a shade color, not in the palette
+          needsShadeRestoration = true;
+          shadeColorToRestore = imageData.textColor;
+          shadeTypeToRestore = "text";
+        }
+      }
+
+      // Restore shade color state if needed
+      if (needsShadeRestoration) {
+        setSelectedShadeColor(shadeColorToRestore);
+        setSelectedShadeType(shadeTypeToRestore);
       }
 
       setBackgroundColorIndex(bgColorIndex);
@@ -1178,6 +1214,16 @@ function AppContent() {
     setImageToShare(null);
   };
 
+  const showInfoModal = (image) => {
+    setImageToInfo(image);
+    setInfoModalVisible(true);
+  };
+
+  const closeInfoModal = () => {
+    setInfoModalVisible(false);
+    setImageToInfo(null);
+  };
+
   const handleShareFromPreview = async () => {
     try {
       const uri = await captureRef(captureTextRef, {
@@ -1252,9 +1298,18 @@ function AppContent() {
 
     ActionSheetIOS.showActionSheetWithOptions(
       {
-        options: ["Preview", favoriteOption, "Copy", "Duplicate", "Share", "Delete", "Cancel"],
-        destructiveButtonIndex: 5, // Delete option
-        cancelButtonIndex: 6,
+        options: [
+          "Preview",
+          favoriteOption,
+          "Copy",
+          "Duplicate",
+          "Share",
+          "Info",
+          "Delete",
+          "Cancel",
+        ],
+        destructiveButtonIndex: 6, // Delete option
+        cancelButtonIndex: 7,
       },
       (buttonIndex) => {
         switch (buttonIndex) {
@@ -1273,7 +1328,10 @@ function AppContent() {
           case 4: // Share
             showShareModal(image);
             break;
-          case 5: // Delete
+          case 5: // Info
+            showInfoModal(image);
+            break;
+          case 6: // Delete
             confirmDelete(image);
             break;
           default:
@@ -1911,6 +1969,9 @@ function AppContent() {
         onCopyImage={copyImageFromGallery}
         restoreImageFromGallery={restoreImageFromGallery}
       />
+
+      {/* Info modal */}
+      <InfoModal visible={infoModalVisible} imageToInfo={imageToInfo} onClose={closeInfoModal} />
 
       {/* Color selection menu */}
       <ColorMenu
