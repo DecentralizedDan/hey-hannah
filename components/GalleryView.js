@@ -4,20 +4,7 @@ import { COLORS, COLOR_VALUES, ALIGNMENTS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
 import styles from "../styles/AppStyles";
 
-const GalleryView = ({
-  sortedGalleryImages,
-  activeImageId,
-  backgroundColorIndex,
-  textColorIndex,
-  currentBackgroundColor,
-  currentTextColor,
-  alignment,
-  fontFamily,
-  fontSize,
-  text,
-  onImageSelection,
-  onImageActionSheet,
-}) => {
+const GalleryView = ({ sortedGalleryImages, onImageSelection, onImageActionSheet }) => {
   return (
     <View style={styles.galleryContainer}>
       <ScrollView
@@ -52,12 +39,9 @@ const GalleryView = ({
                       style={[
                         styles.thumbnail,
                         {
-                          backgroundColor:
-                            activeImageId === image.id
-                              ? currentBackgroundColor
-                              : image.backgroundColor.startsWith("#")
-                              ? image.backgroundColor
-                              : COLOR_VALUES[image.backgroundColor],
+                          backgroundColor: image.backgroundColor?.startsWith("#")
+                            ? image.backgroundColor
+                            : COLOR_VALUES[image.backgroundColor] || image.backgroundColor,
                         },
                       ]}
                     >
@@ -65,24 +49,13 @@ const GalleryView = ({
                         style={[
                           styles.thumbnailText,
                           {
-                            color:
-                              activeImageId === image.id
-                                ? currentTextColor
-                                : image.textColor.startsWith("#")
-                                ? image.textColor
-                                : COLOR_VALUES[image.textColor],
-                            fontSize:
-                              (activeImageId === image.id ? fontSize : image.fontSize) * 0.21, // Precisely tuned to match original character density
-                            textAlign:
-                              activeImageId === image.id
-                                ? ALIGNMENTS[alignment]
-                                : ALIGNMENTS[image.alignment],
+                            color: image.textColor?.startsWith("#")
+                              ? image.textColor
+                              : COLOR_VALUES[image.textColor] || image.textColor,
+                            fontSize: image.fontSize * 0.21, // Precisely tuned to match original character density
+                            textAlign: ALIGNMENTS[image.alignment],
                             fontFamily:
-                              activeImageId === image.id
-                                ? FONT_FAMILIES[fontFamily] === "System"
-                                  ? undefined
-                                  : FONT_FAMILIES[fontFamily]
-                                : FONT_FAMILIES[image.fontFamily] === "System"
+                              FONT_FAMILIES[image.fontFamily] === "System"
                                 ? undefined
                                 : FONT_FAMILIES[image.fontFamily],
                           },
@@ -90,7 +63,7 @@ const GalleryView = ({
                         numberOfLines={15}
                         ellipsizeMode="tail"
                       >
-                        {activeImageId === image.id ? text : image.text}
+                        {image.text}
                       </Text>
                     </View>
                     <Text style={styles.thumbnailDate}>
