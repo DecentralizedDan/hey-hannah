@@ -25,3 +25,13 @@ After archiving:
 - Click "Distribute App"
 - Choose "App Store Connect" as the distribution method
 - Follow the prompts to upload to App Store Connect
+
+### Step 5: Upload New Screenshots
+If necessary:
+- Generate new Screenshots
+- Download and compress them as follows:
+$     mogrify -quality 75% *.jpg
+or, to limit the images to 500KB
+$     mogrify -define jpeg:extent=500KB *.jpg
+or, to create the compressed images in a different directory:
+$     mogrify -path ../compressed_images -define jpeg:extent=500KB *.jpg
