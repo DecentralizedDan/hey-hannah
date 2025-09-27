@@ -1,0 +1,244 @@
+Font Size Toggle Button Implementation Plan
+==============================================
+
+## Overview
+
+Add a font size toggle button that allows users to cycle through different text size multipliers: 100%, 125%, 150%, 200%, and 300%. The implementation will preserve existing font sizing logic while adding a multiplier system for future compatibility.
+
+## Feature Requirements
+
+### UI Button
+- **Location**: Top controls area (likely in TopControls component)
+- **Appearance**: Button showing current percentage (e.g., "125%")
+- **Interaction**: Tap to cycle through size options
+- **Cycle Order**: 100% → 125% → 150% → 200% → 300% → back to 100%
+
+### Size Options
+- **100%**: Default/normal size (multiplier: 1.0)
+- **125%**: Slightly larger (multiplier: 1.25)
+- **150%**: Medium larger (multiplier: 1.5)
+- **200%**: Double size (multiplier: 2.0)
+- **300%**: Triple size (multiplier: 3.0)
+
+## Implementation Strategy
+
+### 1. State Management
+
+Add new state variables to App.js:
+```javascript
+const [fontSizeMultiplier, setFontSizeMultiplier] = useState(1.0);
+const fontSizeOptions = [1.0, 1.25, 1.5, 2.0, 3.0];
+const fontSizeLabels = ["100%", "125%", "150%", "200%", "300%"];
+```
+
+### 2. Font Size Calculation
+
+Modify existing font size calculation:
+```javascript
+// Current: fontSize is calculated dynamically
+// New: multiply by fontSizeMultiplier
+const effectiveFontSize = fontSize * fontSizeMultiplier;
+```
+
+Apply to all text rendering:
+- Main text display
+- Thumbnail text (scaled appropriately)
+- Capture/export functionality
+
+### 3. Metadata Storage
+
+Add two new fields to image metadata when saving:
+
+```javascript
+const metadata = {
+  // ... existing fields ...
+  baseFontSize: fontSize,           // Original calculated font size in pixels
+  fontSizeMultiplier: fontSizeMultiplier, // Current multiplier (1.0, 1.25, 1.5, 2.0, 3.0)
+  // ... rest of fields ...
+};
+```
+
+### 4. Loading Saved Images
+
+When loading images from gallery:
+```javascript
+// If new fields exist, use them
+if (image.baseFontSize && image.fontSizeMultiplier) {
+  setFontSize(image.baseFontSize);
+  setFontSizeMultiplier(image.fontSizeMultiplier);
+} else {
+  // Legacy support: use existing fontSize field
+  setFontSize(image.fontSize);
+  setFontSizeMultiplier(1.0); // Default to 100%
+}
+```
+
+## Technical Implementation Details
+
+### Button Component
+
+Add to TopControls or create new component:
+```javascript
+const FontSizeToggle = ({ currentMultiplier, onToggle }) => {
+  const currentIndex = fontSizeOptions.indexOf(currentMultiplier);
+  const currentLabel = fontSizeLabels[currentIndex];
+  
+  return (
+    <TouchableOpacity style={styles.fontSizeButton} onPress={onToggle}>
+      <Text style={styles.fontSizeButtonText}>{currentLabel}</Text>
+    </TouchableOpacity>
+  );
+};
+```
+
+### Toggle Function
+
+```javascript
+const toggleFontSize = () => {
+  const currentIndex = fontSizeOptions.indexOf(fontSizeMultiplier);
+  const nextIndex = (currentIndex + 1) % fontSizeOptions.length;
+  setFontSizeMultiplier(fontSizeOptions[nextIndex]);
+};
+```
+
+### Font Size Application
+
+Update all text style calculations:
+```javascript
+// Main text display
+style={{
+  fontSize: fontSize * fontSizeMultiplier,
+  // ... other styles
+}}
+
+// Thumbnail text (maintain proportional scaling)
+style={{
+  fontSize: (fontSize * fontSizeMultiplier) * 0.21, // Existing thumbnail scale factor
+  // ... other styles
+}}
+```
+
+## Implementation Steps
+
+### Phase 1: Core Functionality
+1. Add state variables for font size multiplier
+2. Create font size toggle button component
+3. Implement toggle functionality
+4. Update main text rendering to use multiplier
+5. Add basic styling for the button
+
+### Phase 2: Integration
+1. Integrate button into TopControls layout
+2. Update thumbnail rendering with multiplier
+3. Test all font size options with different text lengths
+4. Ensure UI layout adapts properly to size changes
+
+### Phase 3: Persistence
+1. Add baseFontSize and fontSizeMultiplier to metadata structure
+2. Update image saving logic to store both values
+3. Update image loading logic to restore font size settings
+4. Add legacy support for images without new fields
+
+### Phase 4: Polish
+1. Add smooth transitions/animations if desired
+2. Optimize performance for large text with high multipliers
+3. Test edge cases (very long text, maximum multiplier)
+4. Update info modal to show font size multiplier
+
+## Backward Compatibility
+
+### Legacy Images
+- Images saved before this feature will only have `fontSize` field
+- Loading logic will detect missing fields and default to 100% multiplier
+- No data migration needed
+
+### Future Compatibility
+- `baseFontSize` preserves original calculated size
+- `fontSizeMultiplier` allows exact recreation of user's size choice
+- System can be extended with additional multiplier options
+
+## UI Considerations
+
+### Button Placement
+- Should be easily accessible but not interfere with main workflow
+- Consider placement near other text controls (font family, alignment)
+- Ensure button is large enough for easy tapping
+
+### Visual Feedback
+- Button should clearly show current size percentage
+- Consider visual indicators for size changes (brief highlight/animation)
+- Ensure button styling matches existing UI design language
+
+### Layout Adaptation
+- Text container should adapt to larger text sizes
+- Preview mode should handle all multiplier sizes properly
+- Gallery thumbnails should maintain consistent appearance
+
+## Performance Considerations
+
+### Large Text Handling
+- Monitor performance with 300% multiplier on long text
+- Consider text truncation limits for very large sizes
+- Ensure capture/export functionality works with all sizes
+
+### Memory Usage
+- Large font sizes may increase memory usage
+- Test with maximum text length at 300% multiplier
+- Optimize rendering if needed
+
+## Testing Strategy
+
+### Size Testing
+- Test each multiplier option (100%, 125%, 150%, 200%, 300%)
+- Verify cycling through all options works correctly
+- Test with various text lengths (short, medium, long)
+
+### Persistence Testing
+- Save images at different multipliers
+- Load saved images and verify size restoration
+- Test legacy image loading (without new fields)
+
+### UI Testing
+- Test button placement and accessibility
+- Verify layout adapts properly to size changes
+- Test thumbnail appearance with different multipliers
+
+### Edge Case Testing
+- Maximum text length with 300% multiplier
+- Very short text with all multipliers
+- Rapid button pressing (toggle stability)
+
+## Future Enhancements
+
+### Potential Additions
+- Custom multiplier input (beyond preset options)
+- Keyboard shortcuts for size changes
+- Size presets for different use cases
+- Per-image size memory (remember last used size)
+
+### Advanced Features
+- Automatic size suggestions based on text length
+- Accessibility compliance (larger sizes for vision assistance)
+- Export size optimization (different sizes for different outputs)
+
+## Success Criteria
+
+### Functionality
+- ✅ Button cycles through all 5 size options correctly
+- ✅ Text size changes immediately when button is pressed
+- ✅ Size settings are saved and restored with images
+- ✅ Legacy images load correctly without new fields
+
+### User Experience
+- ✅ Button is intuitive and easy to use
+- ✅ Size changes feel responsive and smooth
+- ✅ UI layout adapts well to all size options
+- ✅ Feature integrates seamlessly with existing workflow
+
+### Technical
+- ✅ No performance degradation with large sizes
+- ✅ Metadata storage works correctly
+- ✅ Backward compatibility maintained
+- ✅ Code is maintainable and well-documented
+
+This implementation provides a robust, future-compatible font sizing system that enhances user control while maintaining the app's existing functionality and design principles.
