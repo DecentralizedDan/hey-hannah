@@ -65,19 +65,41 @@ await FileSystem.copyAsync({
 ```javascript
 const versionInfo = getVersionInfo();
 
-// Get the complete palettes that were used for this image
-const backgroundPalette = getPalette(bgColorModeSelection);
-const textPalette = getPalette(textColorModeSelection);
+// Create structured color info objects using new system
+const backgroundColorInfo = createColorInfo(
+  isShadeSelection(selectedShadeColor, selectedShadeType, "background"),
+  bgColorModeSelection,
+  backgroundColorIndex,
+  highlightedRow,
+  highlightedColumn,
+  selectedShadeColor,
+  selectedShadeType,
+  "background"
+);
+
+const textColorInfo = createColorInfo(
+  isShadeSelection(selectedShadeColor, selectedShadeType, "text"),
+  textColorModeSelection,
+  textColorIndex,
+  highlightedRow,
+  highlightedColumn,
+  selectedShadeColor,
+  selectedShadeType,
+  "text"
+);
 
 const metadata = {
   id: timestamp,
   filename,
   path: permanentPath,
   text: text,                    // Full text content
+  backgroundColorInfo: backgroundColorInfo, // New structured color info
+  textColorInfo: textColorInfo,  // New structured color info
+  // Legacy fields for backward compatibility
   backgroundColor: currentBackgroundColor,  // Actual hex color (e.g., "#FF3333")
-  backgroundPalette: backgroundPalette, // Complete palette array used for background
+  backgroundPalette: getPaletteFromInfo(backgroundColorInfo), // Complete palette array used for background
   textColor: currentTextColor,   // Actual hex color
-  textPalette: textPalette,     // Complete palette array used for text
+  textPalette: getPaletteFromInfo(textColorInfo), // Complete palette array used for text
   alignment,                    // 0=left, 1=center, 2=right
   fontFamily: FONT_FAMILIES[fontFamily], // Font family name (e.g., "System", "Courgette_400Regular")
   fontSize,                     // Calculated font size
@@ -111,8 +133,8 @@ Smart Filenames:
 - Handle duplicates intelligently
 
 Complete Style Preservation:
-- Actual colors (hex values) and complete palettes are saved
-- Color indices are calculated from palettes when needed (no redundant storage)
+- New structured color info system for precise color restoration
+- Backward compatibility with legacy hex-based storage
 - Font family names stored as strings (future-proof against font array changes)
 - Font settings, alignment, text size all preserved
 - Preview height calculated and saved for consistent reproduction
@@ -139,7 +161,7 @@ This architecture ensures that every saved image is a perfect snapshot of how th
 
 7. Complete Metadata Example
 ----------------------------
-Here's what a typical saved image metadata object looks like:
+Here's what a typical saved image metadata object looks like with the new color info system:
 
 ```json
 {
@@ -147,10 +169,18 @@ Here's what a typical saved image metadata object looks like:
   "filename": "hello-world-25-09-2025.jpg",
   "path": "/path/to/gallery/hello-world-25-09-2025.jpg",
   "text": "Hello World!",
-  "backgroundColor": "#FFDD00",
-  "backgroundPalette": ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
-  "textColor": "#3377FF",
-  "textPalette": ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
+  "backgroundColorInfo": {
+    "shade": false,
+    "paletteIndex": 2,
+    "activeColor": 5
+  },
+  "textColorInfo": {
+    "shade": true,
+    "colorIndex": 7,
+    "rowOrColumn": "column",
+    "arrayNumber": 3,
+    "activeColor": 2
+  },
   "alignment": 1,
   "fontFamily": "Courgette_400Regular",
   "fontSize": 28,
@@ -163,12 +193,53 @@ Here's what a typical saved image metadata object looks like:
 }
 ```
 
-Palette Information Fields:
-- backgroundPalette: Complete 8-color palette array used for background color
-- textPalette: Complete 8-color palette array used for text color  
-- Preserves exact color relationships and cycling context
-- Enables perfect restoration of custom shade palettes
-- Future-proofs against palette system changes
+8. New Color Info System
+------------------------
+The app now uses a structured color info system that precisely captures how colors were selected:
+
+**For Regular Palette Colors:**
+```json
+{
+  "shade": false,
+  "paletteIndex": 2,    // Which of the 8 base palettes (0-7)
+  "activeColor": 5      // Which position in that palette (0-7)
+}
+```
+
+**For Shade Colors:**
+```json
+{
+  "shade": true,
+  "colorIndex": 7,      // Which shade array (0=red, 1=orange, ..., 7=black)
+  "rowOrColumn": "column", // Whether a row or column was selected
+  "arrayNumber": 3,     // Which row/column number (0-7)
+  "activeColor": 2      // Position within that row/column (0-7)
+}
+```
+
+**Field Meanings:**
+- `shade`: Boolean indicating if this is a shade selection
+- `colorIndex`: For shades, which of the 8 shade arrays (RED_SHADES, ORANGE_SHADES, etc.)
+- `paletteIndex`: For regular colors, which of the 8 base palettes
+- `rowOrColumn`: For shades, whether user selected a row or column
+- `arrayNumber`: For shades, which specific row/column (0-7)
+- `activeColor`: Position within the selected palette/row/column (0-7)
+
+**Color Restoration Process:**
+1. Check if `shade` is true or false
+2. For regular colors: Use `ALL_COLORS[paletteIndex][activeColor]`
+3. For shade colors: 
+   - Get shade array: `ALL_SHADES[colorIndex]`
+   - If row: position = `arrayNumber * 8 + activeColor`
+   - If column: position = `activeColor * 8 + arrayNumber`
+   - Return `shadeArray[position]`
+
+**Benefits:**
+- No reverse engineering of hex values
+- Direct mapping to user selections
+- Precise restoration of highlighting state
+- Future-proof against color system changes
+- Clean, structured metadata format
 
 Font Family Information:
 - fontFamily: Font family name stored as string (e.g., "System", "Courgette_400Regular")

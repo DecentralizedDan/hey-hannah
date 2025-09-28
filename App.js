@@ -33,6 +33,7 @@ import { COLORS, ALL_COLORS, ALIGNMENTS } from "./constants/colors";
 import { FONT_FAMILIES } from "./constants/fonts";
 import { generateFilename, saveImageForSharing } from "./utils/fileUtils";
 import { generateShadesWithExistingColors } from "./utils/colorUtils";
+import { analyzeShadePattern, restoreShadeHighlighting } from "./utils/shadePatternUtils";
 import { useColorManagement } from "./hooks/useColorManagement";
 import { useGalleryManagement } from "./hooks/useGalleryManagement";
 import styles from "./styles/AppStyles";
@@ -168,17 +169,41 @@ function AppContent() {
   }, [text]);
 
   const cycleBackgroundColor = () => {
-    setBackgroundColorIndex((prev) => (prev + 1) % COLORS.length);
-    // Reset shade selection when cycling colors
-    setSelectedShadeColor(null);
-    setSelectedShadeType(null);
+    // If we have an active shade selection for background, cycle through the shade colors
+    if (selectedShadeColor && selectedShadeType === "background") {
+      const currentPalette = getPalette(bgColorModeSelection);
+      const currentIndex = backgroundColorIndex;
+      const nextIndex = (currentIndex + 1) % currentPalette.length;
+      setBackgroundColorIndex(nextIndex);
+
+      // Update the selected shade color to match the new index
+      setSelectedShadeColor(currentPalette[nextIndex]);
+    } else {
+      // Normal cycling through default palettes
+      setBackgroundColorIndex((prev) => (prev + 1) % COLORS.length);
+      // Reset shade selection when cycling through default colors
+      setSelectedShadeColor(null);
+      setSelectedShadeType(null);
+    }
   };
 
   const cycleTextColor = () => {
-    setTextColorIndex((prev) => (prev + 1) % COLORS.length);
-    // Reset shade selection when cycling colors
-    setSelectedShadeColor(null);
-    setSelectedShadeType(null);
+    // If we have an active shade selection for text, cycle through the shade colors
+    if (selectedShadeColor && selectedShadeType === "text") {
+      const currentPalette = getPalette(textColorModeSelection);
+      const currentIndex = textColorIndex;
+      const nextIndex = (currentIndex + 1) % currentPalette.length;
+      setTextColorIndex(nextIndex);
+
+      // Update the selected shade color to match the new index
+      setSelectedShadeColor(currentPalette[nextIndex]);
+    } else {
+      // Normal cycling through default palettes
+      setTextColorIndex((prev) => (prev + 1) % COLORS.length);
+      // Reset shade selection when cycling through default colors
+      setSelectedShadeColor(null);
+      setSelectedShadeType(null);
+    }
   };
 
   // Color menu functions
@@ -865,16 +890,107 @@ function AppContent() {
 
     // Reset color management state to ensure proper color resolution
     setBgColorMode("palette");
-    setBgColorModeSelection(0); // Use first palette as default
     setTextColorMode("palette");
-    setTextColorModeSelection(0); // Use first palette as default
     setSelectedShadeColor(null); // Clear any shade selections initially
     setSelectedShadeType(null);
 
-    // If the image has saved palette data, try to restore the exact palette context
-    // For now, we'll use the saved hex colors and indices for backward compatibility
-    // The palette arrays provide context but don't need to be actively restored
-    // since the hex colors ensure perfect visual reproduction
+    // Restore custom palettes if needed
+    let bgPaletteIndex = 0;
+    let textPaletteIndex = 0;
+
+    // Check if we need to restore a custom background palette
+    if (imageData.backgroundPalette) {
+      // Check if this palette already exists in customPalettes
+      let existingBgIndex = -1;
+      for (let i = 0; i < customPalettes.length; i++) {
+        if (JSON.stringify(customPalettes[i]) === JSON.stringify(imageData.backgroundPalette)) {
+          existingBgIndex = i;
+          break;
+        }
+      }
+
+      if (existingBgIndex !== -1) {
+        // Use existing custom palette
+        bgPaletteIndex = ALL_COLORS.length + existingBgIndex;
+      } else {
+        // Check if it's one of the default palettes
+        let defaultPaletteIndex = -1;
+        for (let i = 0; i < ALL_COLORS.length; i++) {
+          if (JSON.stringify(ALL_COLORS[i]) === JSON.stringify(imageData.backgroundPalette)) {
+            defaultPaletteIndex = i;
+            break;
+          }
+        }
+
+        if (defaultPaletteIndex !== -1) {
+          // Use default palette
+          bgPaletteIndex = defaultPaletteIndex;
+        } else {
+          // Create new custom palette
+          const newPaletteIndex = saveShadeRowAsPalette(imageData.backgroundPalette);
+          bgPaletteIndex = newPaletteIndex;
+        }
+      }
+    }
+
+    // Check if we need to restore a custom text palette
+    if (imageData.textPalette) {
+      // Check if this palette already exists in customPalettes
+      let existingTextIndex = -1;
+      for (let i = 0; i < customPalettes.length; i++) {
+        if (JSON.stringify(customPalettes[i]) === JSON.stringify(imageData.textPalette)) {
+          existingTextIndex = i;
+          break;
+        }
+      }
+
+      if (existingTextIndex !== -1) {
+        // Use existing custom palette
+        textPaletteIndex = ALL_COLORS.length + existingTextIndex;
+      } else {
+        // Check if it's one of the default palettes
+        let defaultPaletteIndex = -1;
+        for (let i = 0; i < ALL_COLORS.length; i++) {
+          if (JSON.stringify(ALL_COLORS[i]) === JSON.stringify(imageData.textPalette)) {
+            defaultPaletteIndex = i;
+            break;
+          }
+        }
+
+        if (defaultPaletteIndex !== -1) {
+          // Use default palette
+          textPaletteIndex = defaultPaletteIndex;
+        } else {
+          // Create new custom palette
+          const newPaletteIndex = saveShadeRowAsPalette(imageData.textPalette);
+          textPaletteIndex = newPaletteIndex;
+        }
+      }
+    }
+
+    // Set the restored palette indices
+    setBgColorModeSelection(bgPaletteIndex);
+    setTextColorModeSelection(textPaletteIndex);
+
+    // Analyze if the restored palettes represent shade patterns and restore highlighting
+    let bgShadePattern = null;
+    let textShadePattern = null;
+
+    if (imageData.backgroundPalette) {
+      bgShadePattern = analyzeShadePattern(imageData.backgroundPalette);
+    }
+
+    if (imageData.textPalette) {
+      textShadePattern = analyzeShadePattern(imageData.textPalette);
+    }
+
+    // Restore highlighting state based on shade pattern analysis
+    restoreShadeHighlighting(
+      bgShadePattern,
+      textShadePattern,
+      setHighlightedRow,
+      setHighlightedColumn
+    );
 
     // Switch to create view with clean state
     setCurrentView("create");
