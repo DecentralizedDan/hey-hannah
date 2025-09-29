@@ -2086,7 +2086,17 @@ function AppContent() {
       <DeleteModal
         visible={deleteModalVisible}
         imageToDelete={imageToDelete}
-        onConfirm={deleteImageFromGallery}
+        onConfirm={async (imageId) => {
+          const success = await deleteImageFromGallery(imageId);
+          if (success) {
+            // Dismiss modal after successful deletion
+            setDeleteModalVisible(false);
+            setImageToDelete(null);
+          } else {
+            // Show error if deletion failed
+            Alert.alert("Error", "Failed to delete image. Please try again.");
+          }
+        }}
         onCancel={cancelDelete}
       />
 
