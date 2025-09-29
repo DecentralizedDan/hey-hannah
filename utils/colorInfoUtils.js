@@ -23,25 +23,9 @@ const createColorInfo = (
   selectedShadeType,
   colorType
 ) => {
-  if (__DEV__) {
-    console.log(`createColorInfo for ${colorType}:`, {
-      isShade,
-      colorModeSelection,
-      colorIndex,
-      highlightedRow,
-      highlightedColumn,
-      selectedShadeColor,
-      selectedShadeType,
-    });
-  }
-
   if (isShade && selectedShadeColor && selectedShadeType === colorType) {
     // This is a shade color - need to determine which shade array and position
     const shadeColorInfo = analyzeShadeColor(selectedShadeColor, highlightedRow, highlightedColumn);
-
-    if (__DEV__) {
-      console.log(`Creating shade color info:`, shadeColorInfo);
-    }
 
     return {
       shade: true,
@@ -52,11 +36,6 @@ const createColorInfo = (
     };
   } else {
     // This is a regular palette color
-    if (__DEV__) {
-      console.log(
-        `Creating regular palette color info: paletteIndex=${colorModeSelection}, activeColor=${colorIndex}`
-      );
-    }
 
     return {
       shade: false,
@@ -78,12 +57,6 @@ const analyzeShadeColor = (shadeColor, highlightedRow, highlightedColumn) => {
   const safeHighlightedRow = typeof highlightedRow === "number" ? highlightedRow : -1;
   const safeHighlightedColumn = typeof highlightedColumn === "number" ? highlightedColumn : -1;
 
-  if (__DEV__) {
-    console.log(
-      `analyzeShadeColor: shadeColor=${shadeColor}, row=${safeHighlightedRow}, col=${safeHighlightedColumn}`
-    );
-  }
-
   // Find which color type (shade array) this color belongs to
   for (let colorIndex = 0; colorIndex < ALL_SHADES.length; colorIndex++) {
     const shadeArray = ALL_SHADES[colorIndex];
@@ -101,9 +74,6 @@ const analyzeShadeColor = (shadeColor, highlightedRow, highlightedColumn) => {
           arrayNumber: row,
           activeColor: column,
         };
-        if (__DEV__) {
-          console.log(`Row selection result:`, result);
-        }
         return result;
       } else if (safeHighlightedColumn !== -1) {
         // This is a column selection
@@ -115,9 +85,6 @@ const analyzeShadeColor = (shadeColor, highlightedRow, highlightedColumn) => {
           arrayNumber: column,
           activeColor: row,
         };
-        if (__DEV__) {
-          console.log(`Column selection result:`, result);
-        }
         return result;
       } else {
         // Fallback: determine row/column from position
@@ -129,9 +96,6 @@ const analyzeShadeColor = (shadeColor, highlightedRow, highlightedColumn) => {
           arrayNumber: row,
           activeColor: column,
         };
-        if (__DEV__) {
-          console.log(`Fallback selection result:`, result);
-        }
         return result;
       }
     }
@@ -155,21 +119,11 @@ const getColorFromInfo = (colorInfo) => {
       // Get color from specific row
       const position = colorInfo.arrayNumber * 8 + colorInfo.activeColor;
       const color = shadeArray[position];
-      if (__DEV__) {
-        console.log(
-          `Row shade: colorIndex=${colorInfo.colorIndex}, arrayNumber=${colorInfo.arrayNumber}, activeColor=${colorInfo.activeColor}, position=${position}, color=${color}`
-        );
-      }
       return color;
     } else {
       // Get color from specific column
       const position = colorInfo.activeColor * 8 + colorInfo.arrayNumber;
       const color = shadeArray[position];
-      if (__DEV__) {
-        console.log(
-          `Column shade: colorIndex=${colorInfo.colorIndex}, arrayNumber=${colorInfo.arrayNumber}, activeColor=${colorInfo.activeColor}, position=${position}, color=${color}`
-        );
-      }
       return color;
     }
   } else {

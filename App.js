@@ -110,8 +110,11 @@ function AppContent() {
   } = useGalleryManagement();
 
   const [text, setText] = useState("");
-  const [backgroundColorIndex, setBackgroundColorIndex] = useState(2); // default yellow background
-  const [textColorIndex, setTextColorIndex] = useState(4); // default blue text
+  const [backgroundColorIndex, setBackgroundColorIndexInternal] = useState(2); // default yellow background
+  const [textColorIndex, setTextColorIndexInternal] = useState(4); // default blue text
+
+  const setBackgroundColorIndex = setBackgroundColorIndexInternal;
+  const setTextColorIndex = setTextColorIndexInternal;
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
 
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
@@ -1004,24 +1007,36 @@ function AppContent() {
       let textColorIndex = 0;
 
       if (imageData.backgroundPalette && imageData.backgroundColor) {
+        // New format: search for hex color in palette
         const bgIndex = imageData.backgroundPalette.indexOf(imageData.backgroundColor);
         if (bgIndex !== -1) {
           bgColorIndex = bgIndex;
         }
+      } else if (!imageData.backgroundPalette && imageData.backgroundColorIndex !== undefined) {
+        // Old format: use stored index directly
+        bgColorIndex = imageData.backgroundColorIndex;
       }
 
       if (imageData.textPalette && imageData.textColor) {
+        // New format: search for hex color in palette
         const textIndex = imageData.textPalette.indexOf(imageData.textColor);
         if (textIndex !== -1) {
           textColorIndex = textIndex;
         }
+      } else if (!imageData.textPalette && imageData.textColorIndex !== undefined) {
+        // Old format: use stored index directly
+        textColorIndex = imageData.textColorIndex;
       }
 
-      // Fall back to saved indices for backward compatibility with older images
-      if (imageData.backgroundColorIndex !== undefined && bgColorIndex === 0) {
+      // Legacy fallback (should not be needed with explicit old format handling above)
+      if (
+        imageData.backgroundColorIndex !== undefined &&
+        bgColorIndex === 0 &&
+        imageData.backgroundPalette
+      ) {
         bgColorIndex = imageData.backgroundColorIndex;
       }
-      if (imageData.textColorIndex !== undefined && textColorIndex === 0) {
+      if (imageData.textColorIndex !== undefined && textColorIndex === 0 && imageData.textPalette) {
         textColorIndex = imageData.textColorIndex;
       }
 
