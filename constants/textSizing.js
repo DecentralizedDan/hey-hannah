@@ -1,17 +1,18 @@
 // Text sizing constants and helper functions
 
-export const TEXT_SIZES = ["small", "medium", "large", "extra-large"];
+export const TEXT_SIZES = ["small", "medium", "extra-medium", "large", "extra-large"];
 
 export const BASE_FONT_SIZES = {
   small: 20, // Small text size in pixels
   medium: 32, // Medium text size in pixels
-  large: 48, // Large text size in pixels
+  "extra-medium": 48, // Extra medium text size in pixels
+  large: 72, // Large text size in pixels
   "extra-large": 96, // Extra large text size in pixels
 };
 
 /**
  * Convert size name to pixel value
- * @param {string} sizeName - "small", "medium", "large", or "extra-large"
+ * @param {string} sizeName - "small", "medium", "extra-medium", "large", or "extra-large"
  * @param {number} magnification - Magnification factor (default 1.0)
  * @returns {number} Font size in pixels
  */
@@ -23,10 +24,10 @@ export const getSizeValue = (sizeName, magnification = 1.0) => {
 /**
  * Get display label for size button
  * @param {number} sizeIndex - Index in TEXT_SIZES array
- * @returns {string} Display label (S/M/L/XL)
+ * @returns {string} Display label (S/M/XM/L/XL)
  */
 export const getSizeLabel = (sizeIndex) => {
-  const labels = { small: "S", medium: "M", large: "L", "extra-large": "XL" };
+  const labels = { small: "S", medium: "M", "extra-medium": "XM", large: "L", "extra-large": "XL" };
   const sizeName = TEXT_SIZES[sizeIndex] || "medium";
   return labels[sizeName];
 };

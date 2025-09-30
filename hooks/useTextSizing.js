@@ -11,14 +11,14 @@ import {
  * Custom hook for managing text sizing state and operations
  */
 export const useTextSizing = () => {
-  const [currentTextSize, setCurrentTextSize] = useState(1); // 0=small, 1=medium, 2=large, 3=extra-large
+  const [currentTextSize, setCurrentTextSize] = useState(1); // 0=small, 1=medium, 2=extra-medium, 3=large, 4=extra-large
   const [textSegments, setTextSegments] = useState([]);
   const [textSelection, setTextSelection] = useState({ start: 0, end: 0 });
   const [isEditingText, setIsEditingText] = useState(false);
   const [magnification, setMagnification] = useState(1.0);
 
   /**
-   * Cycle through text sizes (S -> M -> L -> XL -> S)
+   * Cycle through text sizes (S -> M -> XM -> L -> XL -> S)
    */
   const cycleTextSize = useCallback(() => {
     setCurrentTextSize((prevSize) => (prevSize + 1) % TEXT_SIZES.length);
