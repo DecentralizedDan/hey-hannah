@@ -39,8 +39,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: "5%",
     paddingTop: "5%",
     paddingBottom: "5%",
-    flex: 1,
-    justifyContent: "space-between",
+    minHeight: 200, // Minimum height in pixels
+    justifyContent: "flex-start",
   },
   captureText: {
     textAlignVertical: "top",

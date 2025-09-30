@@ -34,6 +34,7 @@ import { FONT_FAMILIES } from "./constants/fonts";
 import { generateFilename, saveImageForSharing } from "./utils/fileUtils";
 import { generateShadesWithExistingColors } from "./utils/colorUtils";
 import { analyzeShadePattern, restoreShadeHighlighting } from "./utils/shadePatternUtils";
+import { calculatePreviewHeight } from "./utils/heightUtils";
 import { useColorManagement } from "./hooks/useColorManagement";
 import { useGalleryManagement } from "./hooks/useGalleryManagement";
 import { useTextSizing } from "./hooks/useTextSizing";
@@ -504,6 +505,23 @@ function AppContent() {
     }
     // Always cycle to next size
     cycleTextSize();
+
+    // Reset preview height so it recalculates with new text size
+    if (isPreviewMode && text.length > 0) {
+      setTimeout(async () => {
+        try {
+          const measuredHeight = await measureTextHeight();
+          const calculatedHeight = calculatePreviewHeight(
+            measuredHeight,
+            currentTextSize,
+            magnification
+          );
+          setPreviewHeight(calculatedHeight);
+        } catch (error) {
+          if (__DEV__) console.warn("Preview height recalculation error:", error);
+        }
+      }, 100); // Small delay to let size change take effect in milliseconds
+    }
   };
 
   const currentAlignment = ALIGNMENTS[alignment];
@@ -581,14 +599,20 @@ function AppContent() {
             // Wait a moment for keyboard to dismiss and text to render
             await new Promise((resolve) => setTimeout(resolve, 200)); // Increased delay in milliseconds
             const measuredHeight = await measureTextHeight();
-            const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-            const watermarkHeight = 40; // Space for watermark and margin in pixels
-            const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+            const calculatedHeight = calculatePreviewHeight(
+              measuredHeight,
+              currentTextSize,
+              magnification
+            );
 
             setPreviewHeight(calculatedHeight);
           } catch (error) {
             if (__DEV__) console.warn("Height calculation error:", error);
-            setPreviewHeight(400); // Fallback height in pixels
+            // Better fallback based on current text size
+            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+            const fontSize = getSizeValue(currentSize, magnification);
+            const fallbackHeight = Math.max(fontSize * 3 + 200, 400); // Font-size-aware fallback in pixels
+            setPreviewHeight(fallbackHeight);
           }
         }
       }
@@ -618,7 +642,11 @@ function AppContent() {
         if (refToUse && typeof refToUse.measure === "function") {
           // Add timeout to prevent hanging
           const timeoutId = setTimeout(() => {
-            resolve(200); // Fallback height in pixels
+            // Better fallback based on current font size
+            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+            const fontSize = getSizeValue(currentSize, magnification);
+            const estimatedHeight = Math.max(fontSize * 2, 200); // Estimate based on font size in pixels
+            resolve(estimatedHeight);
           }, 1000); // Timeout in milliseconds
 
           try {
@@ -630,32 +658,57 @@ function AppContent() {
             });
           } catch (measureError) {
             clearTimeout(timeoutId);
-            resolve(200); // Fallback height in pixels
+            // Better fallback for large text
+            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+            const fontSize = getSizeValue(currentSize, magnification);
+            const estimatedHeight = Math.max(fontSize * 2, 200);
+            resolve(estimatedHeight);
           }
         } else {
           // Fallback: measure the TextInput if available
           if (textInputRef.current && typeof textInputRef.current.measure === "function") {
             const timeoutId = setTimeout(() => {
-              resolve(200); // Fallback height in pixels
+              const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+              const fontSize = getSizeValue(currentSize, magnification);
+              const estimatedHeight = Math.max(fontSize * 2, 200);
+              resolve(estimatedHeight);
             }, 1000); // Timeout in milliseconds
 
             try {
               textInputRef.current.measure((_x, _y, _width, height) => {
                 clearTimeout(timeoutId);
-                const validHeight = height && height > 0 ? height : 200;
+                const validHeight =
+                  height && height > 0
+                    ? height
+                    : Math.max(
+                        getSizeValue(TEXT_SIZES[currentTextSize] || "medium", magnification) * 2,
+                        200
+                      );
                 resolve(validHeight);
               });
             } catch (measureError) {
               clearTimeout(timeoutId);
-              resolve(200); // Fallback height in pixels
+              const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+              const fontSize = getSizeValue(currentSize, magnification);
+              const estimatedHeight = Math.max(fontSize * 2, 200);
+              resolve(estimatedHeight);
             }
           } else {
-            resolve(200); // Fallback height in pixels
+            // Final fallback: estimate based on font size and text length
+            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+            const fontSize = getSizeValue(currentSize, magnification);
+            const lines = Math.ceil(text.length / 20); // Rough estimate of lines
+            const estimatedHeight = Math.max(fontSize * lines * 1.2, 200); // Line height factor in pixels
+            resolve(estimatedHeight);
           }
         }
       } catch (error) {
         if (__DEV__) console.warn("Height measurement error:", error);
-        resolve(200); // Fallback height in pixels
+        // Final fallback with font size consideration
+        const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+        const fontSize = getSizeValue(currentSize, magnification);
+        const estimatedHeight = Math.max(fontSize * 2, 200);
+        resolve(estimatedHeight);
       }
     });
   };
@@ -1462,9 +1515,11 @@ function AppContent() {
               // Wait a moment for text to render
               await new Promise((resolve) => setTimeout(resolve, 200)); // Delay in milliseconds
               const measuredHeight = await measureTextHeight();
-              const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-              const watermarkHeight = 40; // Space for watermark and margin in pixels
-              const calculatedHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+              const calculatedHeight = calculatePreviewHeight(
+                measuredHeight,
+                currentTextSize,
+                magnification
+              );
 
               setPreviewHeight(calculatedHeight);
             }
@@ -1614,79 +1669,6 @@ function AppContent() {
     }
   };
 
-  const saveToPhotos = async () => {
-    try {
-      if (!text.trim()) {
-        Alert.alert("No Text", "Please write something before saving.");
-        return;
-      }
-
-      // Request media library permissions
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please grant photo library permissions to save images."
-        );
-        return;
-      }
-
-      // Dismiss keyboard for clean capture
-      Keyboard.dismiss();
-
-      // Use a proper async function instead of mixing setTimeout with async/await
-      const performCapture = async () => {
-        try {
-          setIsCapturing(true);
-
-          // The capture ref should always be available now since it's always rendered
-
-          // Wait a bit for the capture text to render
-          await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced delay in milliseconds
-
-          const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-          const watermarkHeight = 40; // Space for watermark and margin in pixels
-          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
-
-          if (!captureTextRef.current) {
-            throw new Error("Capture reference is not available");
-          }
-
-          if (!captureTextRef.current) {
-            throw new Error("Capture reference is not available");
-          }
-
-          const uri = await captureRef(captureTextRef.current, {
-            format: "jpg",
-            quality: 1.0,
-            result: "tmpfile",
-            height: captureHeight,
-          });
-
-          if (!uri) {
-            throw new Error("Failed to generate image");
-          }
-
-          await MediaLibrary.saveToLibraryAsync(uri);
-          Alert.alert("Success", "Image saved to Photos!");
-        } catch (error) {
-          if (__DEV__) console.error("Capture error details:", error);
-          Alert.alert("Error", `Failed to save image: ${error.message || "Unknown error"}`);
-        } finally {
-          setIsCapturing(false);
-        }
-      };
-
-      // Wait for keyboard to dismiss and UI to settle before capturing
-      setTimeout(performCapture, 1000); // Delay in milliseconds
-    } catch (error) {
-      if (__DEV__) console.error("Permission error:", error);
-      Alert.alert("Error", "Failed to request permissions.");
-      setIsCapturing(false);
-    }
-  };
-
   const shareAsMessage = async () => {
     try {
       if (!text.trim()) {
@@ -1720,7 +1702,7 @@ function AppContent() {
             format: "jpg",
             quality: 1.0,
             result: "tmpfile",
-            height: captureHeight,
+            height: Math.min(captureHeight, 4000), // Limit height to prevent memory issues in pixels
           });
 
           if (await Sharing.isAvailableAsync()) {
