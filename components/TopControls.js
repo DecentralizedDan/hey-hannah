@@ -7,12 +7,14 @@ const TopControls = ({
   currentBackgroundColor,
   currentTextColor,
   currentAlignment,
+  currentTextSizeLabel,
   isHoldingPreview,
   onCycleBackgroundColor,
   onOpenBackgroundColorMenu,
   onCycleTextColor,
   onOpenTextColorMenu,
   onCycleFontFamily,
+  onCycleTextSize,
   onCycleAlignment,
   onTogglePreview,
   onPreviewPressIn,
@@ -108,6 +110,14 @@ const TopControls = ({
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>Aa</Text>
         </View>
         <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>FONT</Text>
+      </TouchableOpacity>
+
+      {/* Text size control */}
+      <TouchableOpacity style={styles.controlButton} onPress={onCycleTextSize}>
+        <View style={[styles.sizeIcon, { borderColor: "#FFFFFF" }]}>
+          <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>{currentTextSizeLabel}</Text>
+        </View>
+        <Text style={[styles.controlLabel, { color: "#FFFFFF" }]}>SIZE</Text>
       </TouchableOpacity>
 
       {/* Alignment control */}

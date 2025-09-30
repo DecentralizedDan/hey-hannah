@@ -36,6 +36,8 @@ import { generateShadesWithExistingColors } from "./utils/colorUtils";
 import { analyzeShadePattern, restoreShadeHighlighting } from "./utils/shadePatternUtils";
 import { useColorManagement } from "./hooks/useColorManagement";
 import { useGalleryManagement } from "./hooks/useGalleryManagement";
+import { useTextSizing } from "./hooks/useTextSizing";
+import { getSizeValue, TEXT_SIZES } from "./constants/textSizing";
 import styles from "./styles/AppStyles";
 
 // Import UI components
@@ -46,13 +48,13 @@ import ShareModal from "./components/ShareModal";
 import InfoModal from "./components/InfoModal";
 import TopControls from "./components/TopControls";
 import NavigationBar from "./components/NavigationBar";
+import SegmentedText from "./components/SegmentedText";
 
 // Import version utilities
 import { getVersionInfo } from "./utils/appVersion";
 
 function AppContent() {
   const insets = useSafeAreaInsets();
-  const baseSize = 32; // font size in pixels
 
   // Load Google Fonts
   const [fontsLoaded] = useFonts({
@@ -109,6 +111,27 @@ function AppContent() {
     toggleFavoriteImage,
   } = useGalleryManagement();
 
+  // Text sizing hook
+  const {
+    currentTextSize,
+    textSegments,
+    textSelection,
+    isEditingText,
+    magnification,
+    cycleTextSize,
+    applyTextSizeToSelection,
+    initializeSegments,
+    updateSegmentsFromText,
+    setTextSegmentsDirectly,
+    enterEditingMode,
+    exitEditingMode,
+    updateTextSelection,
+    updateMagnification,
+    resetTextSizing,
+    getCurrentSizeLabel,
+    getPlainText,
+  } = useTextSizing();
+
   const [text, setText] = useState("");
   const [backgroundColorIndex, setBackgroundColorIndexInternal] = useState(2); // default yellow background
   const [textColorIndex, setTextColorIndexInternal] = useState(4); // default blue text
@@ -118,7 +141,6 @@ function AppContent() {
   const [alignment, setAlignment] = useState(0); // 0=left, 1=center, 2=right
 
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
-  const [fontSize, setFontSize] = useState(baseSize);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
@@ -145,31 +167,6 @@ function AppContent() {
   const measureTextRef = useRef(null);
   const previewHoldTimerRef = useRef(null);
   const newHoldTimerRef = useRef(null);
-
-  // Calculate font size based on text length
-  useEffect(() => {
-    // Simple algorithm: reduce font size as text gets longer
-    const minSize = 20; // font size in pixels
-    const textLength = text.length;
-    const shrinkStart = 300; // max length of text before font size starts shrinking
-
-    if (text.length === 0) {
-      setFontSize(baseSize);
-      return;
-    }
-
-    const calculateSize = () => {
-      let result = baseSize;
-
-      if (textLength > shrinkStart) {
-        result = baseSize - ((textLength - shrinkStart) / shrinkStart) * (baseSize - minSize);
-      }
-
-      return Math.round(result);
-    };
-
-    setFontSize(calculateSize());
-  }, [text]);
 
   const cycleBackgroundColor = () => {
     // If we have an active shade selection for background, cycle through the shade colors
@@ -500,6 +497,15 @@ function AppContent() {
     setFontFamily((prev) => (prev + 1) % FONT_FAMILIES.length);
   };
 
+  const handleCycleTextSize = () => {
+    // If there's selected text, apply the new size to it
+    if (textSelection.start !== textSelection.end && text.length > 0) {
+      applyTextSizeToSelection(text);
+    }
+    // Always cycle to next size
+    cycleTextSize();
+  };
+
   const currentAlignment = ALIGNMENTS[alignment];
   const currentBackgroundColor = getCurrentBackgroundColor(backgroundColorIndex);
   const currentFontFamily =
@@ -510,18 +516,57 @@ function AppContent() {
 
   const dismissKeyboard = () => {
     Keyboard.dismiss();
+    exitEditingMode();
   };
+
+  // Disabled keyboard listener that was interfering with typing
+  // useEffect(() => {
+  //   const keyboardDidHideListener = Keyboard.addListener("keyboardDidHide", () => {
+  //     exitEditingMode();
+  //   });
+
+  //   return () => {
+  //     keyboardDidHideListener?.remove();
+  //   };
+  // }, [exitEditingMode]);
+
+  // Focus TextInput when entering editing mode
+  useEffect(() => {
+    if (isEditingText && textInputRef.current) {
+      // Use requestAnimationFrame for better timing
+      const focusTimer = setTimeout(() => {
+        try {
+          textInputRef.current?.focus();
+        } catch (error) {
+          console.log("Focus error:", error);
+        }
+      }, 200);
+      return () => clearTimeout(focusTimer);
+    }
+  }, [isEditingText]);
 
   const handleTextChange = (newText) => {
     setText(newText);
     if (newText.length > 0 && !startedWriting) {
       setStartedWriting(true);
+    } else if (newText.length === 0 && startedWriting) {
+      setStartedWriting(false);
     }
     // Reset undo state when user types new text after deletion
     if (showUndo && newText.length > 0) {
       setShowUndo(false);
       setDeletedText("");
     }
+  };
+
+  const handleTextChangeWithSegments = (newText) => {
+    handleTextChange(newText);
+    updateSegmentsFromText(newText);
+  };
+
+  const handleSelectionChange = (event) => {
+    const { start, end } = event.nativeEvent.selection;
+    updateTextSelection({ start, end });
   };
 
   const togglePreviewMode = async () => {
@@ -732,14 +777,16 @@ function AppContent() {
       id: timestamp,
       filename,
       path: permanentPath,
-      text: text, // Full text content
+      text: text, // Full text content (backward compatibility)
+      textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
+      magnification: magnification, // Text magnification factor
+      baseFontSize: 32, // Base font size in pixels
       backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
       backgroundPalette: backgroundPalette, // Complete palette array used for background
       textColor: currentTextColor, // Use actual current color (including shades)
       textPalette: textPalette, // Complete palette array used for text
       alignment,
       fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
-      fontSize,
       previewHeight,
       isFavorited: false,
       createdAt: new Date().toISOString(),
@@ -818,11 +865,12 @@ function AppContent() {
           // Check if content has actually changed
           const contentChanged =
             existingImage.text !== text ||
+            JSON.stringify(existingImage.textSegments) !== JSON.stringify(textSegments) ||
+            existingImage.magnification !== magnification ||
             existingImage.backgroundColor !== currentBackgroundColor ||
             existingImage.textColor !== currentTextColor ||
             existingImage.alignment !== alignment ||
-            existingImage.fontFamily !== FONT_FAMILIES[fontFamily] ||
-            existingImage.fontSize !== fontSize;
+            existingImage.fontFamily !== FONT_FAMILIES[fontFamily];
 
           // Update metadata with new timestamp and current date only if content changed
           const versionInfo = getVersionInfo();
@@ -835,14 +883,16 @@ function AppContent() {
             ...existingImage,
             filename,
             path: permanentPath,
-            text: text, // Full text content
+            text: text, // Full text content (backward compatibility)
+            textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
+            magnification: magnification, // Text magnification factor
+            baseFontSize: existingImage.baseFontSize || 32, // Preserve existing base font size or default
             backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
             backgroundPalette: backgroundPalette, // Complete palette array used for background
             textColor: currentTextColor, // Use actual current color (including shades)
             textPalette: textPalette, // Complete palette array used for text
             alignment,
             fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
-            fontSize,
             previewHeight,
             isFavorited: existingImage.isFavorited || false, // Preserve favorite status
             createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
@@ -1001,6 +1051,17 @@ function AppContent() {
     // Now restore the actual image data after the clean state is rendered
     setTimeout(() => {
       setText(imageData.text);
+
+      // Restore text sizing data with backward compatibility
+      if (imageData.textSegments && imageData.textSegments.length > 0) {
+        // New format: use text segments
+        setTextSegmentsDirectly(imageData.textSegments);
+        updateMagnification(imageData.magnification || 1.0);
+      } else {
+        // Legacy format: convert plain text to medium segments
+        initializeSegments(imageData.text, "medium");
+        updateMagnification(1.0); // Default magnification for legacy documents
+      }
 
       // Calculate color indices from the saved palettes and hex colors
       let bgColorIndex = 0;
@@ -1168,7 +1229,7 @@ function AppContent() {
     setTextColorIndex(3); // default blue text
     setAlignment(0); // left alignment
     setFontFamily(0); // default font
-    setFontSize(baseSize);
+    resetTextSizing();
     setPreviewHeight(400); // default height in pixels
     setStartedWriting(false);
     setIsPreviewMode(false);
@@ -1186,7 +1247,6 @@ function AppContent() {
       textColorIndex,
       alignment,
       fontFamily,
-      fontSize,
       previewHeight,
       activeImageId,
     });
@@ -1199,7 +1259,7 @@ function AppContent() {
       setTextColorIndex(3); // default blue text
       setAlignment(0); // left alignment
       setFontFamily(0); // default font
-      setFontSize(baseSize);
+      resetTextSizing();
       setPreviewHeight(400); // default height in pixels
       setStartedWriting(false);
       setIsPreviewMode(false);
@@ -1216,7 +1276,7 @@ function AppContent() {
       setTextColorIndex(previousImageState.textColorIndex);
       setAlignment(previousImageState.alignment);
       setFontFamily(previousImageState.fontFamily);
-      setFontSize(previousImageState.fontSize);
+      // Font size handling removed - now handled by text sizing system
       setPreviewHeight(previousImageState.previewHeight);
       setActiveImageId(previousImageState.activeImageId);
       setStartedWriting(previousImageState.text.length > 0);
@@ -1703,7 +1763,14 @@ function AppContent() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-        <TouchableWithoutFeedback onPress={dismissKeyboard}>
+        <TouchableWithoutFeedback
+          onPress={() => {
+            // Only dismiss keyboard if not actively editing text
+            if (!isEditingText) {
+              dismissKeyboard();
+            }
+          }}
+        >
           <View style={styles.flex}>
             <StatusBar barStyle="light-content" backgroundColor="#000000" />
 
@@ -1737,19 +1804,20 @@ function AppContent() {
                 ]}
                 collapsable={false}
               >
-                <Text
+                <SegmentedText
+                  segments={
+                    textSegments.length > 0 ? textSegments : [{ text: text, size: "medium" }]
+                  }
+                  magnification={magnification}
                   style={[
                     styles.captureText,
                     {
                       color: currentTextColor,
-                      fontSize: fontSize,
                       textAlign: currentAlignment,
                       fontFamily: currentFontFamily,
                     },
                   ]}
-                >
-                  {text}
-                </Text>
+                />
                 <Text
                   style={[
                     styles.watermark,
@@ -1792,12 +1860,14 @@ function AppContent() {
                 currentBackgroundColor={currentBackgroundColor}
                 currentTextColor={currentTextColor}
                 currentAlignment={currentAlignment}
+                currentTextSizeLabel={getCurrentSizeLabel()}
                 isHoldingPreview={isHoldingPreview}
                 onCycleBackgroundColor={cycleBackgroundColor}
                 onOpenBackgroundColorMenu={() => openColorMenu("background")}
                 onCycleTextColor={cycleTextColor}
                 onOpenTextColorMenu={() => openColorMenu("text")}
                 onCycleFontFamily={cycleFontFamily}
+                onCycleTextSize={handleCycleTextSize}
                 onCycleAlignment={cycleAlignment}
                 onTogglePreview={togglePreviewMode}
                 onPreviewPressIn={handlePreviewPressIn}
@@ -1841,7 +1911,10 @@ function AppContent() {
                           styles.captureText,
                           {
                             color: currentTextColor,
-                            fontSize: fontSize,
+                            fontSize: getSizeValue(
+                              TEXT_SIZES[currentTextSize] || "medium",
+                              magnification
+                            ),
                             textAlign: currentAlignment,
                             fontFamily: currentFontFamily,
                           },
@@ -1861,58 +1934,110 @@ function AppContent() {
                       </Text>
                     </View>
 
-                    {!startedWriting ? (
-                      <Text
-                        style={[
-                          styles.placeholderText,
-                          {
-                            color: currentTextColor,
-                            fontSize: fontSize,
-                            textAlign: currentAlignment,
-                            fontFamily: currentFontFamily,
-                            opacity: 0.6, // 60% opacity
-                          },
-                        ]}
-                      ></Text>
-                    ) : null}
-
                     {/* Invisible text for measurement - always rendered */}
-                    <Text
+                    <SegmentedText
                       ref={measureTextRef}
+                      segments={
+                        textSegments.length > 0 ? textSegments : [{ text: text, size: "medium" }]
+                      }
+                      magnification={magnification}
                       style={[
                         styles.measureText,
                         {
                           color: currentTextColor,
-                          fontSize: fontSize,
                           textAlign: currentAlignment,
                           fontFamily: currentFontFamily,
                         },
                       ]}
-                    >
-                      {text}
-                    </Text>
+                    />
 
-                    {/* TextInput for user interaction - hidden during capture and preview */}
+                    {/* Dual-mode text editing system */}
                     {!isPreviewMode && (
-                      <TextInput
-                        ref={textInputRef}
-                        style={[
-                          styles.textInput,
-                          {
-                            color: isCapturing ? "transparent" : currentTextColor,
-                            fontSize: fontSize,
-                            textAlign: currentAlignment,
-                            fontFamily: currentFontFamily,
-                          },
-                        ]}
-                        value={text}
-                        onChangeText={handleTextChange}
-                        placeholder="Say something..."
-                        multiline
-                        scrollEnabled={true}
-                        showsVerticalScrollIndicator={false}
-                        textAlignVertical="top"
-                      />
+                      <>
+                        {/* Editing mode: Show TextInput */}
+                        {isEditingText && (
+                          <TextInput
+                            ref={textInputRef}
+                            style={[
+                              styles.textInput,
+                              {
+                                color: isCapturing ? "transparent" : currentTextColor,
+                                fontSize: getSizeValue(
+                                  TEXT_SIZES[currentTextSize] || "medium",
+                                  magnification
+                                ),
+                                textAlign: currentAlignment,
+                                fontFamily: currentFontFamily,
+                              },
+                            ]}
+                            value={text}
+                            onChangeText={handleTextChange}
+                            placeholder="Say something..."
+                            placeholderTextColor={currentTextColor}
+                            multiline
+                            scrollEnabled={true}
+                            showsVerticalScrollIndicator={false}
+                            textAlignVertical="top"
+                          />
+                        )}
+
+                        {/* Viewing mode: Show formatted text overlay */}
+                        {!isEditingText && (
+                          <TouchableOpacity
+                            style={[
+                              styles.textInput,
+                              {
+                                justifyContent: text.length === 0 ? "center" : "flex-start",
+                              },
+                            ]}
+                            onPress={() => {
+                              // Synchronize text with segments before editing
+                              const plainText = getPlainText();
+                              if (plainText !== text) {
+                                setText(plainText);
+                              }
+                              enterEditingMode();
+                            }}
+                            activeOpacity={1}
+                          >
+                            {text.length === 0 ? (
+                              <Text
+                                style={[
+                                  styles.placeholderText,
+                                  {
+                                    color: currentTextColor,
+                                    opacity: 0.7,
+                                    fontSize: getSizeValue(
+                                      TEXT_SIZES[currentTextSize] || "medium",
+                                      magnification
+                                    ),
+                                    textAlign: currentAlignment,
+                                    fontFamily: currentFontFamily,
+                                  },
+                                ]}
+                              >
+                                Say something...
+                              </Text>
+                            ) : (
+                              <SegmentedText
+                                segments={
+                                  textSegments.length > 0
+                                    ? textSegments
+                                    : [{ text: text, size: "medium" }]
+                                }
+                                magnification={magnification}
+                                style={[
+                                  {
+                                    color: currentTextColor,
+                                    textAlign: currentAlignment,
+                                    fontFamily: currentFontFamily,
+                                  },
+                                ]}
+                              />
+                            )}
+                          </TouchableOpacity>
+                        )}
+                      </>
                     )}
                   </View>
                 </TouchableWithoutFeedback>
@@ -2051,7 +2176,10 @@ function AppContent() {
                       styles.previewText,
                       {
                         color: currentTextColor,
-                        fontSize: fontSize,
+                        fontSize: getSizeValue(
+                          TEXT_SIZES[currentTextSize] || "medium",
+                          magnification
+                        ),
                         textAlign: currentAlignment,
                         fontFamily: currentFontFamily,
                       },

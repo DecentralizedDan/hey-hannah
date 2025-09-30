@@ -188,6 +188,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 5, // Bottom margin in pixels
   },
+  sizeIcon: {
+    width: 40, // Icon width in pixels
+    height: 40, // Icon height in pixels
+    borderRadius: 20, // Corner radius in pixels
+    borderWidth: 2, // Border thickness in pixels
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 5, // Bottom margin in pixels
+  },
   alignmentText: {
     fontSize: 18, // Text size in pixels
     fontWeight: "bold",
