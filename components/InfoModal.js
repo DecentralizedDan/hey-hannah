@@ -39,11 +39,8 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
   if (!imageToInfo) return null;
 
   const debugFields = [
-    { key: "backgroundColor", label: "Background Color" },
-    { key: "backgroundPalette", label: "Background Palette" },
     { key: "textColor", label: "Text Color" },
-    { key: "textPalette", label: "Text Palette" },
-    { key: "alignment", label: "Alignment" },
+    { key: "backgroundColor", label: "Background Color" },
     { key: "fontFamily", label: "Font Family" },
     { key: "fontSize", label: "Font Size" },
     { key: "fileSize", label: "File Size" },
@@ -109,7 +106,7 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.infoModalContainer}>
           <View style={styles.infoModalHeader}>
-            <Text style={styles.infoModalTitle}>Info</Text>
+            <Text style={styles.infoModalTitle}>Image Information</Text>
             <TouchableOpacity style={styles.infoModalCloseButton} onPress={onClose}>
               <Text style={styles.infoModalCloseButtonText}>✕</Text>
             </TouchableOpacity>

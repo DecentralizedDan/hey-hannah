@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   watermark: {
     fontSize: 12, // Watermark text size in pixels
     textAlign: "center",
-    marginTop: 40, // Minimum top margin from text in pixels
+    marginTop: 20, // Minimum top margin from text in pixels
     opacity: 0.7,
     fontStyle: "italic",
   },
