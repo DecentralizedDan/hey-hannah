@@ -143,6 +143,8 @@ function AppContent() {
 
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showCaptureScreen, setShowCaptureScreen] = useState(false);
+  const captureScreenRef = useRef(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
   const [startedWriting, setStartedWriting] = useState(false);
@@ -834,6 +836,7 @@ function AppContent() {
       textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
       magnification: magnification, // Text magnification factor
       baseFontSize: 32, // Base font size in pixels
+      currentTextSize: currentTextSize, // Current text size index (0=S, 1=M, 2=XM, 3=L, 4=XL)
       backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
       backgroundPalette: backgroundPalette, // Complete palette array used for background
       textColor: currentTextColor, // Use actual current color (including shades)
@@ -1114,6 +1117,15 @@ function AppContent() {
         // Legacy format: convert plain text to medium segments
         initializeSegments(imageData.text, "medium");
         updateMagnification(1.0); // Default magnification for legacy documents
+      }
+
+      // Restore current text size with backward compatibility
+      if (imageData.currentTextSize !== undefined) {
+        // New format: restore saved text size index
+        setCurrentTextSize(imageData.currentTextSize);
+      } else {
+        // Legacy format: default to medium (index 1)
+        setCurrentTextSize(1);
       }
 
       // Calculate color indices from the saved palettes and hex colors
@@ -1619,50 +1631,52 @@ function AppContent() {
       await new Promise((resolve) => setTimeout(resolve, 300)); // Delay in milliseconds
 
       try {
-        const uri = await captureRef(captureTextRef.current, {
+        // Show dedicated capture screen
+        setShowCaptureScreen(true);
+
+        // Wait for the capture screen to render
+        await new Promise((resolve) => setTimeout(resolve, 300)); // Delay to ensure proper rendering in milliseconds
+
+        // Use native screenshot to capture the entire screen
+        const { captureScreen } = require("react-native-view-shot");
+        const uri = await captureScreen({
           format: "png",
           quality: 1.0,
           result: "tmpfile",
-          afterScreenUpdates: true, // Ensures view is fully rendered before capture
         });
+
+        // Hide the capture screen
+        setShowCaptureScreen(false);
 
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
         const info = await FileSystem.getInfoAsync(uri, { size: true });
         const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
 
         if (info?.size && info.size > maxBytes) {
-          if (__DEV__)
-            console.warn(
-              `Image size ${info.size} B exceeds pasteboard limit, falling back to text.`
-            );
-
           await Clipboard.setStringAsync(text);
-
           Alert.alert("Text Copied", "Image too large; copied text instead.");
           return;
         }
 
-        // Convert image file to base64 for clipboard
-        const base64Image = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
-        // Attempt to set the image on the clipboard (no data URI prefix needed)
-        await Clipboard.setImageAsync(base64Image);
+        // Try different clipboard approaches
+        try {
+          // Approach 1: Direct file URI (iOS simulator sometimes prefers this)
+          await Clipboard.setImageAsync(uri);
+        } catch (uriError) {
+          // Approach 2: Base64 conversion (fallback)
+          const base64Image = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          await Clipboard.setImageAsync(base64Image);
+        }
 
         Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
-        if (__DEV__) console.warn("Image copy failed, copying text instead:", imageError);
-
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
-        Alert.alert(
-          "Text Copied",
-          `Image copy failed: ${imageError.message || imageError.toString()}. Text copied instead.`
-        );
+        Alert.alert("Text Copied", "Image copy failed. Text copied instead.");
       }
     } catch (error) {
-      if (__DEV__) console.error("Error copying:", error);
       Alert.alert("Error", "Failed to copy to clipboard.");
     } finally {
       setIsCapturing(false);
@@ -1878,25 +1892,28 @@ function AppContent() {
                   >
                     {/* Hidden text for capture - always rendered but invisible when not capturing */}
                     <View
+                      key={`capture-${currentTextSize}-${magnification}`} // Force re-render when text size changes
                       style={[
                         styles.captureContainer,
                         {
                           backgroundColor: currentBackgroundColor,
-                          opacity: isCapturing && text.length > 0 ? 1 : 0,
+                          opacity: isCapturing && text.length > 0 ? 1 : 0, // Back to conditional visibility
                           pointerEvents: "none",
+                          zIndex: isCapturing ? 1000 : -1000, // Bring to front during capture
                         },
                       ]}
                       collapsable={false}
                     >
                       <Text
+                        key={`capture-text-${currentTextSize}-${magnification}`} // Force re-render when text size changes
                         style={[
                           styles.captureText,
                           {
                             color: currentTextColor,
-                            fontSize: getSizeValue(
-                              TEXT_SIZES[currentTextSize] || "medium",
-                              magnification
-                            ),
+                            fontSize: (() => {
+                              const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+                              return getSizeValue(currentSize, magnification);
+                            })(),
                             textAlign: currentAlignment,
                             fontFamily: currentFontFamily,
                           },
@@ -2340,6 +2357,62 @@ function AppContent() {
         }}
         onOpenShadeSelector={openShadeSelector}
       />
+
+      {/* Dedicated Capture Screen - Only visible during copy operations */}
+      {showCaptureScreen && (
+        <View
+          ref={captureScreenRef}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: currentBackgroundColor,
+            paddingHorizontal: "5%",
+            paddingTop: "5%",
+            paddingBottom: "5%",
+            justifyContent: "flex-start",
+            zIndex: 9999,
+          }}
+        >
+          <Text
+            style={{
+              color: currentTextColor,
+              fontSize: (() => {
+                const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+                return getSizeValue(currentSize, magnification);
+              })(),
+              lineHeight: (() => {
+                const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+                const calculatedFontSize = getSizeValue(currentSize, magnification);
+                return calculatedFontSize * 1.15; // 115% of font size for line height
+              })(),
+              textAlign: currentAlignment,
+              fontFamily: currentFontFamily,
+              textAlignVertical: "top",
+              flex: 0,
+              fontWeight: "normal",
+              letterSpacing: 0,
+              includeFontPadding: false, // Android-specific but might help
+            }}
+          >
+            {text}
+          </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              textAlign: "center",
+              marginTop: 40,
+              opacity: 0.7,
+              fontStyle: "italic",
+              color: currentTextColor,
+            }}
+          >
+            made with Hey Hannah
+          </Text>
+        </View>
+      )}
     </>
   );
 }
