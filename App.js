@@ -144,6 +144,8 @@ function AppContent() {
   const colorMenuAnimation = useRef(new Animated.Value(0)).current;
   const [isCapturing, setIsCapturing] = useState(false);
   const [showCaptureScreen, setShowCaptureScreen] = useState(false);
+  const [captureHeight, setCaptureHeight] = useState(400); // Calculated height for capture in pixels
+  const [captureContainerHeight, setCaptureContainerHeight] = useState(null); // Height for hidden capture container in pixels
   const captureScreenRef = useRef(null);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(400); // Larger default height in pixels
@@ -1619,6 +1621,7 @@ function AppContent() {
         return;
       }
 
+      // Use the exact same approach as saveToGallery - no keyboard management
       if (!captureTextRef.current) {
         Alert.alert("Error", "Text rendering not ready. Please try again.");
         return;
@@ -1626,30 +1629,44 @@ function AppContent() {
 
       setIsCapturing(true);
 
-      // Dismiss keyboard and wait for UI to settle
-      Keyboard.dismiss();
-      await new Promise((resolve) => setTimeout(resolve, 300)); // Delay in milliseconds
-
       try {
-        // Show dedicated capture screen
-        setShowCaptureScreen(true);
+        // Calculate proper height for the capture container
+        const measuredHeight = await measureTextHeight();
 
-        // Wait for the capture screen to render
-        await new Promise((resolve) => setTimeout(resolve, 300)); // Delay to ensure proper rendering in milliseconds
+        const calculatedHeight = calculatePreviewHeight(
+          measuredHeight,
+          currentTextSize,
+          magnification
+        );
 
-        // Use native screenshot to capture the entire screen
-        const { captureScreen } = require("react-native-view-shot");
-        const uri = await captureScreen({
+        if (__DEV__)
+          console.log(
+            "Calculated height for copy:",
+            calculatedHeight,
+            "Text size:",
+            currentTextSize,
+            "Measured height:",
+            measuredHeight
+          );
+
+        // Set the calculated height for the hidden capture container
+        setCaptureContainerHeight(calculatedHeight);
+
+        // Brief delay for height update
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay for height update in milliseconds
+
+        // Capture using the existing hidden container (exact same as saveToGallery)
+        const uri = await captureRef(captureTextRef.current, {
           format: "png",
           quality: 1.0,
           result: "tmpfile",
         });
 
-        // Hide the capture screen
-        setShowCaptureScreen(false);
+        if (__DEV__) console.log("Captured image URI:", uri);
 
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
         const info = await FileSystem.getInfoAsync(uri, { size: true });
+        if (__DEV__) console.log("Image info:", info);
         const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
 
         if (info?.size && info.size > maxBytes) {
@@ -1662,24 +1679,36 @@ function AppContent() {
         try {
           // Approach 1: Direct file URI (iOS simulator sometimes prefers this)
           await Clipboard.setImageAsync(uri);
+          Alert.alert("Success", "Image copied to clipboard!");
         } catch (uriError) {
-          // Approach 2: Base64 conversion (fallback)
-          const base64Image = await FileSystem.readAsStringAsync(uri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          await Clipboard.setImageAsync(base64Image);
+          if (__DEV__) console.log("Direct URI failed, trying base64:", uriError);
+          try {
+            // Approach 2: Base64 conversion (fallback)
+            const base64Image = await FileSystem.readAsStringAsync(uri, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            await Clipboard.setImageAsync(base64Image);
+            Alert.alert("Success", "Image copied to clipboard!");
+          } catch (base64Error) {
+            if (__DEV__) console.log("Base64 approach failed:", base64Error);
+            throw base64Error; // Re-throw to trigger text fallback
+          }
         }
-
-        Alert.alert("Success", "Image copied to clipboard!");
       } catch (imageError) {
+        if (__DEV__) console.log("Image capture/copy failed:", imageError);
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
-        Alert.alert("Text Copied", "Image copy failed. Text copied instead.");
+        Alert.alert(
+          "Text Copied",
+          `Image copy failed: ${imageError.message || imageError.toString()}. Text copied instead.`
+        );
       }
     } catch (error) {
       Alert.alert("Error", "Failed to copy to clipboard.");
     } finally {
+      // Ensure cleanup happens regardless of success or failure
       setIsCapturing(false);
+      setCaptureContainerHeight(null); // Reset height to default
     }
   };
 
@@ -1780,9 +1809,9 @@ function AppContent() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  opacity: 0,
+                  opacity: isCapturing ? 1 : 0, // Make visible during capture
                   pointerEvents: "none",
-                  zIndex: -1000,
+                  zIndex: isCapturing ? 1000 : -1000, // Bring to front during capture
                   backgroundColor: currentBackgroundColor,
                 },
               ]}
@@ -1796,13 +1825,18 @@ function AppContent() {
                     backgroundColor: currentBackgroundColor,
                     opacity: 1,
                     pointerEvents: "none",
+                    height: captureContainerHeight || 300, // Use calculated height when available
+                    paddingBottom: 0, // Override default padding to use calculated height
+                    minHeight: 0, // Override default minHeight to use calculated height
                   },
                 ]}
                 collapsable={false}
               >
                 <SegmentedText
                   segments={
-                    textSegments.length > 0 ? textSegments : [{ text: text, size: "medium" }]
+                    textSegments.length > 0
+                      ? textSegments
+                      : [{ text: text, size: TEXT_SIZES[currentTextSize] || "medium" }]
                   }
                   magnification={magnification}
                   style={[
@@ -2367,7 +2401,7 @@ function AppContent() {
             top: 0,
             left: 0,
             width: "100%",
-            height: "100%",
+            height: captureHeight,
             backgroundColor: currentBackgroundColor,
             paddingHorizontal: "5%",
             paddingTop: "5%",
