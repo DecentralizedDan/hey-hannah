@@ -171,6 +171,7 @@ function AppContent() {
   const captureTextRef = useRef(null);
   const measureTextRef = useRef(null);
   const previewHoldTimerRef = useRef(null);
+  const previewLongPressCompleted = useRef(false);
   const newHoldTimerRef = useRef(null);
 
   const cycleBackgroundColor = () => {
@@ -593,6 +594,11 @@ function AppContent() {
 
   const togglePreviewMode = async () => {
     try {
+      // Don't enter preview mode if long press was just completed
+      if (previewLongPressCompleted.current) {
+        return;
+      }
+
       if (!isPreviewMode) {
         Keyboard.dismiss();
         // Set return view to current view when entering preview
@@ -754,6 +760,9 @@ function AppContent() {
       // Auto-copy to clipboard after holding for 750ms
       copyImageToClipboard();
       setIsHoldingPreview(false);
+
+      // Mark that long press was completed to prevent normal press action
+      previewLongPressCompleted.current = true;
     }, 750); // Hold duration in milliseconds
   };
 
@@ -765,6 +774,11 @@ function AppContent() {
       clearTimeout(previewHoldTimerRef.current);
       previewHoldTimerRef.current = null;
     }
+
+    // Reset long press flag after a short delay to allow onPress to check it
+    setTimeout(() => {
+      previewLongPressCompleted.current = false;
+    }, 100); // Brief delay in milliseconds
   };
 
   const handleNewPressIn = () => {
