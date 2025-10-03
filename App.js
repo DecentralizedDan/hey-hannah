@@ -1639,16 +1639,6 @@ function AppContent() {
           magnification
         );
 
-        if (__DEV__)
-          console.log(
-            "Calculated height for copy:",
-            calculatedHeight,
-            "Text size:",
-            currentTextSize,
-            "Measured height:",
-            measuredHeight
-          );
-
         // Set the calculated height for the hidden capture container
         setCaptureContainerHeight(calculatedHeight);
 
@@ -1662,11 +1652,8 @@ function AppContent() {
           result: "tmpfile",
         });
 
-        if (__DEV__) console.log("Captured image URI:", uri);
-
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
         const info = await FileSystem.getInfoAsync(uri, { size: true });
-        if (__DEV__) console.log("Image info:", info);
         const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
 
         if (info?.size && info.size > maxBytes) {
@@ -1681,7 +1668,6 @@ function AppContent() {
           await Clipboard.setImageAsync(uri);
           Alert.alert("Success", "Image copied to clipboard!");
         } catch (uriError) {
-          if (__DEV__) console.log("Direct URI failed, trying base64:", uriError);
           try {
             // Approach 2: Base64 conversion (fallback)
             const base64Image = await FileSystem.readAsStringAsync(uri, {
@@ -1690,18 +1676,13 @@ function AppContent() {
             await Clipboard.setImageAsync(base64Image);
             Alert.alert("Success", "Image copied to clipboard!");
           } catch (base64Error) {
-            if (__DEV__) console.log("Base64 approach failed:", base64Error);
             throw base64Error; // Re-throw to trigger text fallback
           }
         }
       } catch (imageError) {
-        if (__DEV__) console.log("Image capture/copy failed:", imageError);
         // Fallback: copy just the text content
         await Clipboard.setStringAsync(text);
-        Alert.alert(
-          "Text Copied",
-          `Image copy failed: ${imageError.message || imageError.toString()}. Text copied instead.`
-        );
+        Alert.alert("Text Copied", "Image copy failed. Text copied instead.");
       }
     } catch (error) {
       Alert.alert("Error", "Failed to copy to clipboard.");
