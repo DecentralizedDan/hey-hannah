@@ -1514,8 +1514,8 @@ function AppContent() {
     ActionSheetIOS.showActionSheetWithOptions(
       {
         options: [
-          "Preview",
           favoriteOption,
+          "Preview",
           "Copy",
           "Duplicate",
           "Share",
