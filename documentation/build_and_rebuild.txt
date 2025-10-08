@@ -26,9 +26,8 @@ Method 3: Xcode Clean Build
    npx react-native run-ios
 
 Method 4: iOS Build Directory Clean
-rm -rf build
-rm -rf DerivedData
-cd ..
+rm -rf ios/build
+rm -rf ~/Library/Developer/Xcode/DerivedData
 npx react-native run-ios
 
 Method 5: Comprehensive iOS Clean

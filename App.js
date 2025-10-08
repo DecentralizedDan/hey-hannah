@@ -516,11 +516,7 @@ function AppContent() {
       setTimeout(async () => {
         try {
           const measuredHeight = await measureTextHeight();
-          const calculatedHeight = calculatePreviewHeight(
-            measuredHeight,
-            currentTextSize,
-            magnification
-          );
+          const calculatedHeight = calculatePreviewHeight(measuredHeight);
           setPreviewHeight(calculatedHeight);
         } catch (error) {
           if (__DEV__) console.warn("Preview height recalculation error:", error);
@@ -609,11 +605,7 @@ function AppContent() {
             // Wait a moment for keyboard to dismiss and text to render
             await new Promise((resolve) => setTimeout(resolve, 200)); // Increased delay in milliseconds
             const measuredHeight = await measureTextHeight();
-            const calculatedHeight = calculatePreviewHeight(
-              measuredHeight,
-              currentTextSize,
-              magnification
-            );
+            const calculatedHeight = calculatePreviewHeight(measuredHeight);
 
             setPreviewHeight(calculatedHeight);
           } catch (error) {
@@ -645,80 +637,46 @@ function AppContent() {
 
   const measureTextHeight = () => {
     return new Promise((resolve) => {
+      const getFallbackHeight = () => {
+        const currentSize = TEXT_SIZES[currentTextSize] || "medium";
+        const fontSize = getSizeValue(currentSize, magnification);
+        // TODO update rough estimate for different size fonts
+        const lines = Math.ceil(text.length / 20); // Rough estimate of lines
+
+        return Math.round(Math.max(fontSize * lines * 1.2, 200)); // Line height factor in pixels
+      };
+
+      const attemptMeasure = (ref) => {
+        const timeoutId = setTimeout(() => {
+          resolve(getFallbackHeight());
+        }, 1000); // Timeout in milliseconds
+
+        try {
+          ref.measure((_x, _y, _width, height) => {
+            clearTimeout(timeoutId);
+            console.log("height:", height);
+            const validHeight = height && height > 0 ? Math.round(height) : getFallbackHeight();
+            resolve(validHeight);
+          });
+        } catch (measureError) {
+          clearTimeout(timeoutId);
+          resolve(getFallbackHeight());
+        }
+      };
+
       try {
-        // Try to use the measure text ref first (for preview), fallback to capture ref
         const refToUse = measureTextRef.current || captureTextRef.current;
 
         if (refToUse && typeof refToUse.measure === "function") {
-          // Add timeout to prevent hanging
-          const timeoutId = setTimeout(() => {
-            // Better fallback based on current font size
-            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-            const fontSize = getSizeValue(currentSize, magnification);
-            const estimatedHeight = Math.max(fontSize * 2, 200); // Estimate based on font size in pixels
-            resolve(estimatedHeight);
-          }, 1000); // Timeout in milliseconds
-
-          try {
-            refToUse.measure((_x, _y, _width, height) => {
-              clearTimeout(timeoutId);
-              // Ensure we have a valid height value
-              const validHeight = height && height > 0 ? height : 200;
-              resolve(validHeight);
-            });
-          } catch (measureError) {
-            clearTimeout(timeoutId);
-            // Better fallback for large text
-            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-            const fontSize = getSizeValue(currentSize, magnification);
-            const estimatedHeight = Math.max(fontSize * 2, 200);
-            resolve(estimatedHeight);
-          }
+          attemptMeasure(refToUse);
+        } else if (textInputRef.current && typeof textInputRef.current.measure === "function") {
+          attemptMeasure(textInputRef.current);
         } else {
-          // Fallback: measure the TextInput if available
-          if (textInputRef.current && typeof textInputRef.current.measure === "function") {
-            const timeoutId = setTimeout(() => {
-              const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-              const fontSize = getSizeValue(currentSize, magnification);
-              const estimatedHeight = Math.max(fontSize * 2, 200);
-              resolve(estimatedHeight);
-            }, 1000); // Timeout in milliseconds
-
-            try {
-              textInputRef.current.measure((_x, _y, _width, height) => {
-                clearTimeout(timeoutId);
-                const validHeight =
-                  height && height > 0
-                    ? height
-                    : Math.max(
-                        getSizeValue(TEXT_SIZES[currentTextSize] || "medium", magnification) * 2,
-                        200
-                      );
-                resolve(validHeight);
-              });
-            } catch (measureError) {
-              clearTimeout(timeoutId);
-              const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-              const fontSize = getSizeValue(currentSize, magnification);
-              const estimatedHeight = Math.max(fontSize * 2, 200);
-              resolve(estimatedHeight);
-            }
-          } else {
-            // Final fallback: estimate based on font size and text length
-            const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-            const fontSize = getSizeValue(currentSize, magnification);
-            const lines = Math.ceil(text.length / 20); // Rough estimate of lines
-            const estimatedHeight = Math.max(fontSize * lines * 1.2, 200); // Line height factor in pixels
-            resolve(estimatedHeight);
-          }
+          resolve(getFallbackHeight());
         }
       } catch (error) {
         if (__DEV__) console.warn("Height measurement error:", error);
-        // Final fallback with font size consideration
-        const currentSize = TEXT_SIZES[currentTextSize] || "medium";
-        const fontSize = getSizeValue(currentSize, magnification);
-        const estimatedHeight = Math.max(fontSize * 2, 200);
-        resolve(estimatedHeight);
+        resolve(getFallbackHeight());
       }
     });
   };
@@ -751,11 +709,19 @@ function AppContent() {
         // Haptic feedback may not be available on all devices or not properly linked
       }
 
-      // Ensure keyboard is dismissed before capture to avoid snapshot warning
-      Keyboard.dismiss();
+      // Ensure keyboard and text input are fully dismissed before capture
+      // Note: We only blur and dismiss keyboard, NOT exit editing mode to preserve text
+      try {
+        if (textInputRef.current) {
+          textInputRef.current.blur();
+        }
+        Keyboard.dismiss();
+      } catch (dismissError) {
+        // Continue even if dismissal has issues
+      }
 
-      // Wait longer for keyboard dismissal and view settling to prevent snapshot warning
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Extended delay in milliseconds
+      // Wait for keyboard dismissal and input session cleanup
+      await new Promise((resolve) => setTimeout(resolve, 800)); // Extended delay for input cleanup in milliseconds
 
       // Auto-copy to clipboard after holding for 750ms
       copyImageToClipboard();
@@ -1543,11 +1509,7 @@ function AppContent() {
               // Wait a moment for text to render
               await new Promise((resolve) => setTimeout(resolve, 200)); // Delay in milliseconds
               const measuredHeight = await measureTextHeight();
-              const calculatedHeight = calculatePreviewHeight(
-                measuredHeight,
-                currentTextSize,
-                magnification
-              );
+              const calculatedHeight = calculatePreviewHeight(measuredHeight);
 
               setPreviewHeight(calculatedHeight);
             }
@@ -1644,20 +1606,8 @@ function AppContent() {
       setIsCapturing(true);
 
       try {
-        // Calculate proper height for the capture container
-        const measuredHeight = await measureTextHeight();
-
-        const calculatedHeight = calculatePreviewHeight(
-          measuredHeight,
-          currentTextSize,
-          magnification
-        );
-
-        // Set the calculated height for the hidden capture container
-        setCaptureContainerHeight(calculatedHeight);
-
-        // Brief delay for height update
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay for height update in milliseconds
+        // Brief delay to ensure container is rendered with all content
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Capture using the existing hidden container (exact same as saveToGallery)
         const uri = await captureRef(captureTextRef.current, {
@@ -1703,7 +1653,6 @@ function AppContent() {
     } finally {
       // Ensure cleanup happens regardless of success or failure
       setIsCapturing(false);
-      setCaptureContainerHeight(null); // Reset height to default
     }
   };
 
@@ -1728,9 +1677,7 @@ function AppContent() {
           await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced delay in milliseconds
 
           const measuredHeight = await measureTextHeight();
-          const padding = Dimensions.get("window").width * 0.1; // Padding in pixels
-          const watermarkHeight = 40; // Space for watermark and margin in pixels
-          const captureHeight = Math.max(measuredHeight + padding + watermarkHeight, 200); // Minimum height of 200 in pixels
+          const captureHeight = calculatePreviewHeight(measuredHeight);
 
           if (!captureTextRef.current) {
             throw new Error("Capture reference is not available");
@@ -1820,9 +1767,6 @@ function AppContent() {
                     backgroundColor: currentBackgroundColor,
                     opacity: 1,
                     pointerEvents: "none",
-                    height: captureContainerHeight || 300, // Use calculated height when available
-                    paddingBottom: 0, // Override default padding to use calculated height
-                    minHeight: 0, // Override default minHeight to use calculated height
                   },
                 ]}
                 collapsable={false}

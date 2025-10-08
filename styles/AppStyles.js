@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: "5%",
     paddingTop: "5%",
     paddingBottom: "5%",
-    minHeight: 200, // Minimum height in pixels
+    minHeight: 50, // Minimum height in pixels
     justifyContent: "flex-start",
   },
   captureText: {
