@@ -538,17 +538,6 @@ function AppContent() {
     exitEditingMode();
   };
 
-  // Disabled keyboard listener that was interfering with typing
-  // useEffect(() => {
-  //   const keyboardDidHideListener = Keyboard.addListener("keyboardDidHide", () => {
-  //     exitEditingMode();
-  //   });
-
-  //   return () => {
-  //     keyboardDidHideListener?.remove();
-  //   };
-  // }, [exitEditingMode]);
-
   // Focus TextInput when entering editing mode
   useEffect(() => {
     if (isEditingText && textInputRef.current) {
@@ -576,16 +565,6 @@ function AppContent() {
       setShowUndo(false);
       setDeletedText("");
     }
-  };
-
-  const handleTextChangeWithSegments = (newText) => {
-    handleTextChange(newText);
-    updateSegmentsFromText(newText);
-  };
-
-  const handleSelectionChange = (event) => {
-    const { start, end } = event.nativeEvent.selection;
-    updateTextSelection({ start, end });
   };
 
   const togglePreviewMode = async () => {
@@ -654,7 +633,6 @@ function AppContent() {
         try {
           ref.measure((_x, _y, _width, height) => {
             clearTimeout(timeoutId);
-            console.log("height:", height);
             const validHeight = height && height > 0 ? Math.round(height) : getFallbackHeight();
             resolve(validHeight);
           });
@@ -811,26 +789,26 @@ function AppContent() {
     const textPalette = getPalette(textColorModeSelection);
 
     const metadata = {
-      id: timestamp,
-      filename,
-      path: permanentPath,
-      text: text, // Full text content (backward compatibility)
-      textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
-      magnification: magnification, // Text magnification factor
-      baseFontSize: 32, // Base font size in pixels
-      currentTextSize: currentTextSize, // Current text size index (0=S, 1=M, 2=XM, 3=L, 4=XL)
+      alignment,
+      appVersion: versionInfo.appVersion, // App version that created this image
       backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
       backgroundPalette: backgroundPalette, // Complete palette array used for background
+      baseFontSize: 32, // Base font size in pixels
+      buildNumber: versionInfo.buildNumber, // Build number that created this image
+      createdAt: new Date().toISOString(),
+      currentTextSize: currentTextSize, // Current text size index (0=S, 1=M, 2=XM, 3=L, 4=XL)
+      filename,
+      fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
+      id: timestamp,
+      isFavorited: false,
+      magnification: magnification, // Text magnification factor
+      os: "ios", // Operating system platform
+      path: permanentPath,
+      previewHeight,
+      text: text, // Full text content (backward compatibility)
       textColor: currentTextColor, // Use actual current color (including shades)
       textPalette: textPalette, // Complete palette array used for text
-      alignment,
-      fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
-      previewHeight,
-      isFavorited: false,
-      createdAt: new Date().toISOString(),
-      appVersion: versionInfo.appVersion, // App version that created this image
-      buildNumber: versionInfo.buildNumber, // Build number that created this image
-      os: "ios", // Operating system platform
+      textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
     };
 
     // Update gallery list - add new images at the beginning so newest appears first
@@ -1404,8 +1382,8 @@ function AppContent() {
       }
 
       // Use the same approach as the working copyImageToClipboard function
-      // Guard against extremely large images (≈5 MB is practical ceiling for UIPasteboard)
-      const maxBytes = 5 * 1024 * 1024; // 5 MB in bytes
+      // Guard against extremely large images (≈10 MB is practical ceiling for UIPasteboard)
+      const maxBytes = 10 * 1024 * 1024; // 10 MB in bytes
 
       if (fileInfo?.size && fileInfo.size > maxBytes) {
         if (__DEV__)
@@ -2124,11 +2102,11 @@ function AppContent() {
                 contentContainerStyle={[
                   styles.previewCenterContainer,
                   {
-                    minHeight: Dimensions.get("window").height - 120, // Available height below buttons
-                    justifyContent: "center",
                     alignItems: "center",
-                    paddingTop: 120, // Space for header buttons and labels in pixels
+                    justifyContent: "center",
+                    minHeight: Dimensions.get("window").height - 120, // Available height below buttons
                     paddingBottom: 0, // No bottom padding needed
+                    paddingTop: 120, // Space for header buttons and labels in pixels
                   },
                 ]}
                 showsVerticalScrollIndicator={false}
@@ -2148,12 +2126,12 @@ function AppContent() {
                       styles.previewText,
                       {
                         color: currentTextColor,
+                        fontFamily: currentFontFamily,
                         fontSize: getSizeValue(
                           TEXT_SIZES[currentTextSize] || "medium",
                           magnification
                         ),
                         textAlign: currentAlignment,
-                        fontFamily: currentFontFamily,
                       },
                     ]}
                   >
