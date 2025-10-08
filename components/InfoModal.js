@@ -3,6 +3,7 @@ import { View, Text, Modal, TouchableOpacity, ScrollView } from "react-native";
 import * as FileSystem from "expo-file-system";
 import styles from "../styles/AppStyles";
 import { COLOR_VALUES } from "../constants/colors";
+import { TEXT_SIZES } from "../constants/textSizing";
 
 const InfoModal = ({ visible, imageToInfo, onClose }) => {
   const [fileSize, setFileSize] = useState(null);
@@ -42,7 +43,7 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
     { key: "textColor", label: "Text Color" },
     { key: "backgroundColor", label: "Background Color" },
     { key: "fontFamily", label: "Font Family" },
-    { key: "fontSize", label: "Font Size" },
+    { key: "currentTextSize", label: "Text Size" },
     { key: "fileSize", label: "File Size" },
     { key: "createdAt", label: "Created At" },
   ];
@@ -65,23 +66,20 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
   };
 
   const formatValue = (key, value) => {
-    if (key === "fileSize") {
+    if (key === "currentTextSize") {
+      const capitalized = TEXT_SIZES[value].charAt(0).toUpperCase() + TEXT_SIZES[value].slice(1);
+      return capitalized;
+    } else if (key === "fileSize") {
       return formatFileSize(fileSize);
-    }
-
-    if (value === null || value === undefined) {
+    } else if (value === null || value === undefined) {
       return "N/A";
-    }
-
-    if (Array.isArray(value)) {
+    } else if (Array.isArray(value)) {
       return value.join(", ");
-    }
-
-    if (key === "createdAt") {
+    } else if (key === "createdAt") {
       return new Date(value).toLocaleString();
+    } else {
+      return String(value);
     }
-
-    return String(value);
   };
 
   const renderFieldValue = (key, value) => {
@@ -96,9 +94,9 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
           <Text style={styles.infoFieldValue}>{formattedValue}</Text>
         </View>
       );
+    } else {
+      return <Text style={styles.infoFieldValue}>{formattedValue}</Text>;
     }
-
-    return <Text style={styles.infoFieldValue}>{formattedValue}</Text>;
   };
 
   return (

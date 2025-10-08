@@ -124,6 +124,7 @@ function AppContent() {
     initializeSegments,
     updateSegmentsFromText,
     setTextSegmentsDirectly,
+    setCurrentTextSizeValue,
     enterEditingMode,
     exitEditingMode,
     updateTextSelection,
@@ -897,24 +898,24 @@ function AppContent() {
 
           const updatedMetadata = {
             ...existingImage,
-            filename,
-            path: permanentPath,
-            text: text, // Full text content (backward compatibility)
-            textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
-            magnification: magnification, // Text magnification factor
-            baseFontSize: existingImage.baseFontSize || 32, // Preserve existing base font size or default
+            alignment,
+            appVersion: versionInfo.appVersion, // App version that last edited this image
             backgroundColor: currentBackgroundColor, // Use actual current color (including shades)
             backgroundPalette: backgroundPalette, // Complete palette array used for background
+            baseFontSize: existingImage.baseFontSize || 32, // Preserve existing base font size or default
+            buildNumber: versionInfo.buildNumber, // Build number that last edited this image
+            createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
+            filename,
+            fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
+            isFavorited: existingImage.isFavorited || false, // Preserve favorite status
+            magnification: magnification, // Text magnification factor
+            os: existingImage.os || "ios", // Preserve existing OS or default to ios
+            path: permanentPath,
+            previewHeight,
+            text: text, // Full text content (backward compatibility)
             textColor: currentTextColor, // Use actual current color (including shades)
             textPalette: textPalette, // Complete palette array used for text
-            alignment,
-            fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
-            previewHeight,
-            isFavorited: existingImage.isFavorited || false, // Preserve favorite status
-            createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
-            appVersion: versionInfo.appVersion, // App version that last edited this image
-            buildNumber: versionInfo.buildNumber, // Build number that last edited this image
-            os: existingImage.os || "ios", // Preserve existing OS or default to ios
+            textSegments: textSegments.length > 0 ? textSegments : null, // New segmented text format
           };
 
           // Replace the existing image in the array
@@ -1082,10 +1083,10 @@ function AppContent() {
       // Restore current text size with backward compatibility
       if (imageData.currentTextSize !== undefined) {
         // New format: restore saved text size index
-        setCurrentTextSize(imageData.currentTextSize);
+        setCurrentTextSizeValue(imageData.currentTextSize);
       } else {
         // Legacy format: default to medium (index 1)
-        setCurrentTextSize(1);
+        setCurrentTextSizeValue(1);
       }
 
       // Calculate color indices from the saved palettes and hex colors

@@ -158,6 +158,14 @@ export const useTextSizing = () => {
   }, []);
 
   /**
+   * Set current text size index
+   * @param {number} sizeIndex - Text size index (0=small, 1=medium, 2=extra-medium, 3=large, 4=extra-large)
+   */
+  const setCurrentTextSizeValue = useCallback((sizeIndex) => {
+    setCurrentTextSize(sizeIndex);
+  }, []);
+
+  /**
    * Get plain text from current segments
    */
   const getPlainText = useCallback(() => {
@@ -178,6 +186,7 @@ export const useTextSizing = () => {
     initializeSegments,
     updateSegmentsFromText,
     setTextSegmentsDirectly,
+    setCurrentTextSizeValue,
     enterEditingMode,
     exitEditingMode,
     updateTextSelection,
