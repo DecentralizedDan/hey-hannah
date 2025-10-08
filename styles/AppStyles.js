@@ -47,6 +47,7 @@ const styles = StyleSheet.create({
     flex: 0,
   },
   watermark: {
+    // Note: This appears to be unused
     fontSize: 12, // Watermark text size in pixels
     textAlign: "center",
     marginTop: 20, // Minimum top margin from text in pixels
