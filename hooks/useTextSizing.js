@@ -143,7 +143,11 @@ export const useTextSizing = () => {
    * @param {number} newMagnification - New magnification value
    */
   const updateMagnification = useCallback((newMagnification) => {
-    setMagnification(newMagnification);
+    const validMagnification =
+      newMagnification && !isNaN(newMagnification) && isFinite(newMagnification)
+        ? newMagnification
+        : 1.0;
+    setMagnification(validMagnification);
   }, []);
 
   /**
@@ -162,7 +166,11 @@ export const useTextSizing = () => {
    * @param {number} sizeIndex - Text size index (0=small, 1=medium, 2=extra-medium, 3=large, 4=extra-large)
    */
   const setCurrentTextSizeValue = useCallback((sizeIndex) => {
-    setCurrentTextSize(sizeIndex);
+    const validIndex =
+      sizeIndex !== undefined && !isNaN(sizeIndex)
+        ? Math.max(0, Math.min(4, Math.floor(sizeIndex)))
+        : 1;
+    setCurrentTextSize(validIndex);
   }, []);
 
   /**

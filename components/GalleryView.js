@@ -2,6 +2,7 @@ import React from "react";
 import { View, ScrollView, Text, TouchableOpacity } from "react-native";
 import { COLORS, COLOR_VALUES, ALIGNMENTS } from "../constants/colors";
 import { FONT_FAMILIES } from "../constants/fonts";
+import { TEXT_SIZES, getSizeValue } from "../constants/textSizing";
 import styles from "../styles/AppStyles";
 
 const GalleryView = ({ sortedGalleryImages, onImageSelection, onImageActionSheet }) => {
@@ -52,7 +53,18 @@ const GalleryView = ({ sortedGalleryImages, onImageSelection, onImageActionSheet
                             color: image.textColor?.startsWith("#")
                               ? image.textColor
                               : COLOR_VALUES[image.textColor] || image.textColor,
-                            fontSize: image.fontSize * 0.21, // Precisely tuned to match original character density
+                            fontSize: (() => {
+                              const sizeIndex =
+                                image.currentTextSize !== undefined ? image.currentTextSize : 1;
+                              const magnification = image.magnification || 1.0;
+                              const sizeName = TEXT_SIZES[sizeIndex] || "medium";
+                              const actualFontSize = getSizeValue(sizeName, magnification);
+                              const thumbnailFontSize = actualFontSize * 0.21; // Precisely tuned to match original character density in pixels
+
+                              return isNaN(thumbnailFontSize) || !isFinite(thumbnailFontSize)
+                                ? 6.72
+                                : thumbnailFontSize; // Default to 32 * 0.21 = 6.72 pixels
+                            })(),
                             textAlign: ALIGNMENTS[image.alignment],
                             fontFamily:
                               FONT_FAMILIES[image.fontFamily] === "System"

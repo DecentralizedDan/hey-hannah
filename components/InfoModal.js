@@ -67,8 +67,11 @@ const InfoModal = ({ visible, imageToInfo, onClose }) => {
 
   const formatValue = (key, value) => {
     if (key === "currentTextSize") {
-      const capitalized = TEXT_SIZES[value].charAt(0).toUpperCase() + TEXT_SIZES[value].slice(1);
-      return capitalized;
+      if (value !== undefined && !isNaN(value) && TEXT_SIZES[value]) {
+        const capitalized = TEXT_SIZES[value].charAt(0).toUpperCase() + TEXT_SIZES[value].slice(1);
+        return capitalized;
+      }
+      return "N/A";
     } else if (key === "fileSize") {
       return formatFileSize(fileSize);
     } else if (value === null || value === undefined) {

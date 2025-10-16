@@ -18,7 +18,11 @@ export const BASE_FONT_SIZES = {
  */
 export const getSizeValue = (sizeName, magnification = 1.0) => {
   const baseSize = BASE_FONT_SIZES[sizeName] || BASE_FONT_SIZES.medium;
-  return Math.round(baseSize * magnification);
+  const validMagnification =
+    magnification && !isNaN(magnification) && isFinite(magnification) ? magnification : 1.0;
+  const result = Math.round(baseSize * validMagnification);
+
+  return result && !isNaN(result) && isFinite(result) ? result : 32; // Default to 32 pixels if invalid
 };
 
 /**

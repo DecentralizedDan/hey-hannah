@@ -594,7 +594,11 @@ function AppContent() {
             const currentSize = TEXT_SIZES[currentTextSize] || "medium";
             const fontSize = getSizeValue(currentSize, magnification);
             const fallbackHeight = Math.max(fontSize * 3 + 200, 400); // Font-size-aware fallback in pixels
-            setPreviewHeight(fallbackHeight);
+            const validFallbackHeight =
+              fallbackHeight && !isNaN(fallbackHeight) && isFinite(fallbackHeight)
+                ? fallbackHeight
+                : 400;
+            setPreviewHeight(validFallbackHeight);
           }
         }
       }
@@ -622,8 +626,11 @@ function AppContent() {
         const fontSize = getSizeValue(currentSize, magnification);
         // TODO update rough estimate for different size fonts
         const lines = Math.ceil(text.length / 20); // Rough estimate of lines
+        const calculatedHeight = Math.round(Math.max(fontSize * lines * 1.2, 200)); // Line height factor in pixels
 
-        return Math.round(Math.max(fontSize * lines * 1.2, 200)); // Line height factor in pixels
+        return calculatedHeight && !isNaN(calculatedHeight) && isFinite(calculatedHeight)
+          ? calculatedHeight
+          : 400; // Default to 400 pixels if invalid
       };
 
       const attemptMeasure = (ref) => {
@@ -634,7 +641,10 @@ function AppContent() {
         try {
           ref.measure((_x, _y, _width, height) => {
             clearTimeout(timeoutId);
-            const validHeight = height && height > 0 ? Math.round(height) : getFallbackHeight();
+            const validHeight =
+              height && height > 0 && !isNaN(height) && isFinite(height)
+                ? Math.round(height)
+                : getFallbackHeight();
             resolve(validHeight);
           });
         } catch (measureError) {
@@ -843,11 +853,31 @@ function AppContent() {
       await FileSystem.makeDirectoryAsync(galleryDir, { intermediates: true });
 
       // Capture image
-      const uri = await captureRef(captureTextRef.current, {
-        format: "jpg",
-        quality: 1.0,
-        result: "tmpfile",
-      });
+      let uri;
+      try {
+        uri = await captureRef(captureTextRef.current, {
+          format: "jpg",
+          quality: 1.0,
+          result: "tmpfile",
+        });
+      } catch (captureError) {
+        if (__DEV__) console.error("Capture error:", captureError);
+
+        // Check if error is related to view being too large
+        if (
+          captureError?.message?.includes("drawViewHierarchyInRect") ||
+          captureError?.code === "EUNSPECIFIED"
+        ) {
+          Alert.alert(
+            "Image Too Large",
+            "The text is too large to capture. Try reducing the text size or using less text."
+          );
+        } else {
+          Alert.alert("Error", "Failed to capture image.");
+        }
+
+        return false;
+      }
 
       let newGalleryImages;
       let imageId;
@@ -905,6 +935,7 @@ function AppContent() {
             baseFontSize: existingImage.baseFontSize || 32, // Preserve existing base font size or default
             buildNumber: versionInfo.buildNumber, // Build number that last edited this image
             createdAt: contentChanged ? new Date().toISOString() : existingImage.createdAt, // Only update date if content changed
+            currentTextSize: currentTextSize, // Current text size index (0=S, 1=M, 2=XM, 3=L, 4=XL)
             filename,
             fontFamily: FONT_FAMILIES[fontFamily], // Store font family name instead of index
             isFavorited: existingImage.isFavorited || false, // Preserve favorite status
@@ -1073,7 +1104,11 @@ function AppContent() {
       if (imageData.textSegments && imageData.textSegments.length > 0) {
         // New format: use text segments
         setTextSegmentsDirectly(imageData.textSegments);
-        updateMagnification(imageData.magnification || 1.0);
+        const validMagnification =
+          imageData.magnification && !isNaN(imageData.magnification)
+            ? imageData.magnification
+            : 1.0;
+        updateMagnification(validMagnification);
       } else {
         // Legacy format: convert plain text to medium segments
         initializeSegments(imageData.text, "medium");
@@ -1081,9 +1116,10 @@ function AppContent() {
       }
 
       // Restore current text size with backward compatibility
-      if (imageData.currentTextSize !== undefined) {
+      if (imageData.currentTextSize !== undefined && !isNaN(imageData.currentTextSize)) {
         // New format: restore saved text size index
-        setCurrentTextSizeValue(imageData.currentTextSize);
+        const validTextSize = Math.max(0, Math.min(4, Math.floor(imageData.currentTextSize))); // Clamp to 0-4 range
+        setCurrentTextSizeValue(validTextSize);
       } else {
         // Legacy format: default to medium (index 1)
         setCurrentTextSizeValue(1);
@@ -1177,7 +1213,9 @@ function AppContent() {
       setTextColorIndex(textColorIndex);
       setAlignment(imageData.alignment);
       setFontFamily(fontFamilyIndex);
-      setPreviewHeight(imageData.previewHeight);
+      setPreviewHeight(
+        imageData.previewHeight && !isNaN(imageData.previewHeight) ? imageData.previewHeight : 400
+      ); // Default to 400 pixels if invalid
       setStartedWriting(true);
       setActiveImageId(imageData.id);
       setIsTransitioning(false); // Clear transitioning state once fully loaded
@@ -1443,10 +1481,29 @@ function AppContent() {
 
   const handleShareFromPreview = async () => {
     try {
-      const uri = await captureRef(captureTextRef, {
-        format: "jpg",
-        quality: 1.0,
-      });
+      let uri;
+      try {
+        uri = await captureRef(captureTextRef, {
+          format: "jpg",
+          quality: 1.0,
+        });
+      } catch (captureError) {
+        if (__DEV__) console.error("Capture error:", captureError);
+
+        if (
+          captureError?.message?.includes("drawViewHierarchyInRect") ||
+          captureError?.code === "EUNSPECIFIED"
+        ) {
+          Alert.alert(
+            "Image Too Large",
+            "The text is too large to capture. Try reducing the text size or using less text."
+          );
+        } else {
+          Alert.alert("Error", "Failed to capture image.");
+        }
+
+        return;
+      }
 
       if (await Sharing.isAvailableAsync()) {
         // Save the captured image with meaningful filename
@@ -1589,11 +1646,30 @@ function AppContent() {
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Capture using the existing hidden container (exact same as saveToGallery)
-        const uri = await captureRef(captureTextRef.current, {
-          format: "png",
-          quality: 1.0,
-          result: "tmpfile",
-        });
+        let uri;
+        try {
+          uri = await captureRef(captureTextRef.current, {
+            format: "png",
+            quality: 1.0,
+            result: "tmpfile",
+          });
+        } catch (captureError) {
+          if (__DEV__) console.error("Capture error:", captureError);
+
+          if (
+            captureError?.message?.includes("drawViewHierarchyInRect") ||
+            captureError?.code === "EUNSPECIFIED"
+          ) {
+            Alert.alert(
+              "Image Too Large",
+              "The text is too large to copy. Try reducing the text size or using less text."
+            );
+          } else {
+            Alert.alert("Error", "Failed to capture image.");
+          }
+
+          return;
+        }
 
         // Guard against extremely large images (≈10 MB is a practical ceiling for UIPasteboard)
         const info = await FileSystem.getInfoAsync(uri, { size: true });
@@ -1657,17 +1733,37 @@ function AppContent() {
 
           const measuredHeight = await measureTextHeight();
           const captureHeight = calculatePreviewHeight(measuredHeight);
+          const validCaptureHeight =
+            captureHeight && !isNaN(captureHeight) && isFinite(captureHeight) && captureHeight > 0
+              ? captureHeight
+              : 400;
 
           if (!captureTextRef.current) {
             throw new Error("Capture reference is not available");
           }
 
-          const uri = await captureRef(captureTextRef.current, {
-            format: "jpg",
-            quality: 1.0,
-            result: "tmpfile",
-            height: Math.min(captureHeight, 4000), // Limit height to prevent memory issues in pixels
-          });
+          let uri;
+          try {
+            uri = await captureRef(captureTextRef.current, {
+              format: "jpg",
+              quality: 1.0,
+              result: "tmpfile",
+              height: Math.min(validCaptureHeight, 4000), // Limit height to prevent memory issues in pixels
+            });
+          } catch (captureError) {
+            if (__DEV__) console.error("Capture error:", captureError);
+
+            if (
+              captureError?.message?.includes("drawViewHierarchyInRect") ||
+              captureError?.code === "EUNSPECIFIED"
+            ) {
+              throw new Error(
+                "The text is too large to share. Try reducing the text size or using less text."
+              );
+            } else {
+              throw captureError;
+            }
+          }
 
           if (await Sharing.isAvailableAsync()) {
             // Save the captured image with meaningful filename
@@ -2315,16 +2411,19 @@ function AppContent() {
         <View
           ref={captureScreenRef}
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: captureHeight,
             backgroundColor: currentBackgroundColor,
+            height:
+              captureHeight && !isNaN(captureHeight) && isFinite(captureHeight) && captureHeight > 0
+                ? captureHeight
+                : 400,
+            justifyContent: "flex-start",
+            left: 0,
+            paddingBottom: "5%",
             paddingHorizontal: "5%",
             paddingTop: "5%",
-            paddingBottom: "5%",
-            justifyContent: "flex-start",
+            position: "absolute",
+            top: 0,
+            width: "100%",
             zIndex: 9999,
           }}
         >
@@ -2338,7 +2437,9 @@ function AppContent() {
               lineHeight: (() => {
                 const currentSize = TEXT_SIZES[currentTextSize] || "medium";
                 const calculatedFontSize = getSizeValue(currentSize, magnification);
-                return calculatedFontSize * 1.15; // 115% of font size for line height
+                const lineHeight = calculatedFontSize * 1.15; // 115% of font size for line height
+
+                return lineHeight && !isNaN(lineHeight) && isFinite(lineHeight) ? lineHeight : 36.8; // Default to 32 * 1.15 = 36.8 pixels
               })(),
               textAlign: currentAlignment,
               fontFamily: currentFontFamily,

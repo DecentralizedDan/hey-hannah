@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Alert } from "react-native";
+import { captureRef } from "react-native-view-shot";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
@@ -64,10 +65,25 @@ const ShareModal = ({
 
           // Wait a moment for the image to render, then capture it
           await new Promise((resolve) => setTimeout(resolve, 100));
-          const capturedUri = await captureRef(captureTextRef, {
-            format: "jpg",
-            quality: 1.0,
-          });
+
+          let capturedUri;
+          try {
+            capturedUri = await captureRef(captureTextRef, {
+              format: "jpg",
+              quality: 1.0,
+            });
+          } catch (captureError) {
+            if (
+              captureError?.message?.includes("drawViewHierarchyInRect") ||
+              captureError?.code === "EUNSPECIFIED"
+            ) {
+              throw new Error(
+                "The text is too large to share. Try reducing the text size or using less text."
+              );
+            } else {
+              throw captureError;
+            }
+          }
 
           // Save the captured image with meaningful filename
           const existingFilenames = galleryImages.map((img) => img.filename);
