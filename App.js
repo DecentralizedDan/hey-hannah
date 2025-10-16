@@ -1585,11 +1585,11 @@ function AppContent() {
       },
       (buttonIndex) => {
         switch (buttonIndex) {
-          case 0: // Preview
-            previewImageFromGallery(image);
-            break;
-          case 1: // Favorite/Unfavorite
+          case 0: // Favorite/Unfavorite
             toggleFavoriteImage(image.id);
+            break;
+          case 1: // Preview
+            previewImageFromGallery(image);
             break;
           case 2: // Copy
             copyImageFromGallery(image.id);
