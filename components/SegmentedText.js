@@ -27,10 +27,12 @@ const SegmentedText = ({
   if (segments.length === 1) {
     const segment = segments[0];
     const fontSize = getSizeValue(segment.size, magnification);
+    const validFontSize =
+      fontSize && !isNaN(fontSize) && isFinite(fontSize) && fontSize > 0 ? fontSize : 32;
 
     return (
       <Text
-        style={[style, { fontSize }]}
+        style={[style, { fontSize: validFontSize }]}
         numberOfLines={numberOfLines}
         onLayout={onLayout}
         {...textProps}
@@ -46,9 +48,11 @@ const SegmentedText = ({
     <Text style={style} numberOfLines={numberOfLines} onLayout={onLayout} {...textProps}>
       {segments.map((segment, index) => {
         const fontSize = getSizeValue(segment.size, magnification);
+        const validFontSize =
+          fontSize && !isNaN(fontSize) && isFinite(fontSize) && fontSize > 0 ? fontSize : 32;
 
         return (
-          <Text key={index} style={{ fontSize }}>
+          <Text key={index} style={{ fontSize: validFontSize }}>
             {segment.text}
           </Text>
         );
@@ -58,4 +62,3 @@ const SegmentedText = ({
 };
 
 export default SegmentedText;
-

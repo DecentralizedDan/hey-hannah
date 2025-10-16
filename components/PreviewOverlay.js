@@ -135,7 +135,13 @@ const PreviewOverlay = ({
                 styles.previewContainerOverlay,
                 {
                   backgroundColor: currentBackgroundColor,
-                  height: previewHeight, // Use actual calculated height to match saved image
+                  height:
+                    previewHeight &&
+                    !isNaN(previewHeight) &&
+                    isFinite(previewHeight) &&
+                    previewHeight > 0
+                      ? previewHeight
+                      : 400, // Use actual calculated height to match saved image in pixels
                   width: Dimensions.get("window").width,
                 },
               ]}
@@ -145,7 +151,10 @@ const PreviewOverlay = ({
                   styles.previewText,
                   {
                     color: currentTextColor,
-                    fontSize: fontSize,
+                    fontSize:
+                      fontSize && !isNaN(fontSize) && isFinite(fontSize) && fontSize > 0
+                        ? fontSize
+                        : 32,
                     textAlign: currentAlignment,
                     fontFamily: currentFontFamily,
                   },
