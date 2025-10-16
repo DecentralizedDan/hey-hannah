@@ -15,10 +15,10 @@ const COLOR_VALUES = {
 // All 64 colors organized into 8 palettes of 8 colors each
 const ALL_COLORS = [
   // 0: Default palette (improved versions of current colors)
-  ["#FF3333", "#FF7700", "#FFDD00", "#33DD33", "#3377FF", "#AA33FF", "#FFFFFF", "#222222"],
+  ["#E40303", "#FF8C00", "#FFED00", "#008026", "#004CFF", "#732982", "#FFFFFF", "#222222"],
 
   // 1: Pastel palette
-  ["#FFB3B3", "#FFB380", "#FFF5AA", "#B3FFB3", "#B3CCFF", "#E6B3FF", "#FEFEFE", "#888888"],
+  ["#F5A9B8", "#FFB380", "#FFF5AA", "#B3FFB3", "#5BCEFA", "#E6B3FF", "#FEFEFE", "#888888"],
 
   // 2: Earth tones palette
   ["#D85555", "#DD8844", "#DDAA33", "#669944", "#5588AA", "#8855AA", "#F5F0EA", "#3D3D3D"],
@@ -33,7 +33,7 @@ const ALL_COLORS = [
   ["#FF0000", "#FF8800", "#FFFF00", "#00FF00", "#0066FF", "#8800FF", "#FFFFFF", "#000000"],
 
   // 6: Jewel tones palette
-  ["#990033", "#CC4400", "#998800", "#006600", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
+  ["#BC002D", "#CC4400", "#998800", "#006600", "#1A1A99", "#660099", "#F7F7F7", "#1A1A1A"],
 
   // 7: Toxic/Garish palette
   ["#FF0080", "#FF6600", "#CCFF00", "#00FF40", "#0080FF", "#8000FF", "#FFFFFF", "#000000"],
