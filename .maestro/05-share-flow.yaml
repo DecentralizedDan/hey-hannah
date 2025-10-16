@@ -1,0 +1,22 @@
+appId: com.heyhannah.app
+---
+# Test: Open share modal
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Share Test"
+- hideKeyboard
+
+# Tap share button
+- tapOn:
+    id: "share-control"
+
+# Verify share modal appears
+- assertVisible:
+    id: "share-modal"
+
+# Close modal
+- tapOn:
+    id: "close-share-modal"
+

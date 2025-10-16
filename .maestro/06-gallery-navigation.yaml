@@ -1,0 +1,26 @@
+appId: com.heyhannah.app
+---
+# Test: Navigate to gallery and back
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Gallery Test"
+- hideKeyboard
+
+# Navigate to gallery
+- tapOn:
+    id: "gallery-nav-button"
+
+# Verify gallery view
+- assertVisible:
+    id: "gallery-view"
+
+# Navigate back to create
+- tapOn:
+    id: "edit-nav-button"
+
+# Verify text input is visible
+- assertVisible:
+    id: "text-input"
+

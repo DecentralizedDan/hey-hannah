@@ -70,6 +70,7 @@ const TopControls = ({
     <View style={[styles.topControlsContainer, { paddingTop: 20 }]}>
       {/* Background color control */}
       <Pressable
+        testID="bg-color-control"
         style={styles.controlButton}
         onPressIn={handleBgPressIn}
         onPressOut={handleBgPressOut}
@@ -88,6 +89,7 @@ const TopControls = ({
 
       {/* Text color control */}
       <Pressable
+        testID="text-color-control"
         style={styles.controlButton}
         onPressIn={handleTextPressIn}
         onPressOut={handleTextPressOut}
@@ -105,7 +107,7 @@ const TopControls = ({
       </Pressable>
 
       {/* Font family control */}
-      <TouchableOpacity style={styles.controlButton} onPress={onCycleFontFamily}>
+      <TouchableOpacity testID="font-control" style={styles.controlButton} onPress={onCycleFontFamily}>
         <View style={[styles.fontIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>Aa</Text>
         </View>
@@ -113,7 +115,7 @@ const TopControls = ({
       </TouchableOpacity>
 
       {/* Text size control */}
-      <TouchableOpacity style={styles.controlButton} onPress={onCycleTextSize}>
+      <TouchableOpacity testID="size-control" style={styles.controlButton} onPress={onCycleTextSize}>
         <View style={[styles.sizeIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>{currentTextSizeLabel}</Text>
         </View>
@@ -121,7 +123,7 @@ const TopControls = ({
       </TouchableOpacity>
 
       {/* Alignment control */}
-      <TouchableOpacity style={styles.controlButton} onPress={onCycleAlignment}>
+      <TouchableOpacity testID="alignment-control" style={styles.controlButton} onPress={onCycleAlignment}>
         <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>
             {currentAlignment === "left" ? "←" : currentAlignment === "center" ? "↔" : "→"}
@@ -132,6 +134,7 @@ const TopControls = ({
 
       {/* Preview control */}
       <Pressable
+        testID="preview-control"
         style={styles.controlButton}
         onPress={onTogglePreview}
         onPressIn={onPreviewPressIn}
@@ -152,7 +155,7 @@ const TopControls = ({
       </Pressable>
 
       {/* Share control */}
-      <TouchableOpacity style={styles.controlButton} onPress={onShare}>
+      <TouchableOpacity testID="share-control" style={styles.controlButton} onPress={onShare}>
         <View style={[styles.shareIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>↗</Text>
         </View>

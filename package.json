@@ -7,7 +7,9 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test:shades": "node test-shades.js"
+    "test:shades": "node test-shades.js",
+    "test:ui": "maestro test .maestro/",
+    "test:ui:studio": "maestro studio"
   },
   "dependencies": {
     "@expo-google-fonts/allura": "^0.4.2",

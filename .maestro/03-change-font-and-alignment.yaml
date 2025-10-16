@@ -1,0 +1,26 @@
+appId: com.heyhannah.app
+---
+# Test: Change font family and alignment
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Font Test"
+- hideKeyboard
+
+# Cycle through fonts
+- tapOn:
+    id: "font-control"
+- tapOn:
+    id: "font-control"
+
+# Cycle through alignments
+- tapOn:
+    id: "alignment-control"
+- tapOn:
+    id: "alignment-control"
+
+# Verify text is still visible
+- assertVisible:
+    text: "Font Test"
+

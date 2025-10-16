@@ -1,0 +1,6 @@
+appId: com.heyhannah.app
+name: Hey Hannah
+---
+# Maestro configuration for Hey Hannah app
+# Run tests with: maestro test .maestro/
+

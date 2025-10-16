@@ -2005,6 +2005,7 @@ function AppContent() {
                         {isEditingText && (
                           <TextInput
                             ref={textInputRef}
+                            testID="text-input"
                             style={[
                               styles.textInput,
                               {
@@ -2104,7 +2105,7 @@ function AppContent() {
       {/* Preview overlay - rendered outside main layout */}
       {isPreviewMode && (
         <TouchableWithoutFeedback onPress={exitPreviewMode}>
-          <View style={styles.previewOverlay}>
+          <View testID="preview-overlay" style={styles.previewOverlay}>
             <View style={styles.previewOverlayBackground} />
 
             {/* Preview header with conditional buttons based on preview source */}

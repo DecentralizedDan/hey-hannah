@@ -104,30 +104,34 @@ const ShareModal = ({
   };
 
   return (
-    <View style={styles.shareModalOverlay}>
+    <View testID="share-modal" style={styles.shareModalOverlay}>
       <View style={styles.shareModalContainer}>
         <Text style={styles.shareModalTitle}>Share Image</Text>
         <Text style={styles.shareModalMessage}>Choose how to share your image:</Text>
         <View style={styles.shareModalButtons}>
           <TouchableOpacity
+            testID="save-to-photos-button"
             style={[styles.shareModalButton, styles.shareOptionButton]}
             onPress={handleSaveToPhotos}
           >
             <Text style={styles.shareOptionText}>Save to Photos</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            testID="copy-to-clipboard-button"
             style={[styles.shareModalButton, styles.shareOptionButton]}
             onPress={handleCopyToClipboard}
           >
             <Text style={styles.shareOptionText}>Copy to Clipboard</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            testID="share-via-apps-button"
             style={[styles.shareModalButton, styles.shareOptionButton]}
             onPress={handleShareViaApps}
           >
             <Text style={styles.shareOptionText}>Share via Apps</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            testID="close-share-modal"
             style={[styles.shareModalButton, styles.cancelButton]}
             onPress={onClose}
           >

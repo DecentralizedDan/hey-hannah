@@ -1,0 +1,22 @@
+appId: com.heyhannah.app
+---
+# Test: Change background and text colors
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Color Test"
+- hideKeyboard
+
+# Tap background color control
+- tapOn:
+    id: "bg-color-control"
+
+# Tap text color control
+- tapOn:
+    id: "text-color-control"
+
+# Verify text is still visible
+- assertVisible:
+    text: "Color Test"
+

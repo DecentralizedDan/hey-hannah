@@ -1,0 +1,22 @@
+appId: com.heyhannah.app
+---
+# Test: Change text size
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Size Test"
+- hideKeyboard
+
+# Cycle through text sizes
+- tapOn:
+    id: "size-control"
+- tapOn:
+    id: "size-control"
+- tapOn:
+    id: "size-control"
+
+# Verify text is still visible
+- assertVisible:
+    text: "Size Test"
+

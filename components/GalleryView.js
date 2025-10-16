@@ -7,7 +7,7 @@ import styles from "../styles/AppStyles";
 
 const GalleryView = ({ sortedGalleryImages, onImageSelection, onImageActionSheet }) => {
   return (
-    <View style={styles.galleryContainer}>
+    <View testID="gallery-view" style={styles.galleryContainer}>
       <ScrollView
         style={styles.galleryScrollView}
         contentContainerStyle={styles.galleryContent}

@@ -1,0 +1,29 @@
+appId: com.heyhannah.app
+---
+# Test: Toggle preview mode
+
+- launchApp
+- tapOn:
+    id: "text-input"
+- inputText: "Preview Test"
+- hideKeyboard
+
+# Tap preview button
+- tapOn:
+    id: "preview-control"
+
+# Wait for preview to appear
+- waitForAnimationToEnd
+
+# Verify preview overlay is visible
+- assertVisible:
+    id: "preview-overlay"
+
+# Tap to exit preview
+- tapOn:
+    id: "preview-overlay"
+
+# Verify text input is back
+- assertVisible:
+    id: "text-input"
+

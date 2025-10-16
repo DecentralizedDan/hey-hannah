@@ -24,7 +24,7 @@ const NavigationBar = ({
   if (currentView === "create") {
     return (
       <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={onGalleryView}>
+        <TouchableOpacity testID="gallery-nav-button" onPress={onGalleryView}>
           <Text style={styles.navigationText}>Gallery</Text>
         </TouchableOpacity>
 
@@ -65,7 +65,7 @@ const NavigationBar = ({
   if (currentView === "gallery") {
     return (
       <View style={[styles.navigationContainer, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={onToggleGallerySortMode}>
+        <TouchableOpacity testID="gallery-sort-button" onPress={onToggleGallerySortMode}>
           <Text style={styles.navigationText}>
             {gallerySortMode === "newest"
               ? "Newest"
@@ -76,7 +76,7 @@ const NavigationBar = ({
               : "Random"}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onEditView}>
+        <TouchableOpacity testID="edit-nav-button" onPress={onEditView}>
           <Text style={styles.navigationText}>{activeImageId ? "Edit" : "New"}</Text>
         </TouchableOpacity>
       </View>
