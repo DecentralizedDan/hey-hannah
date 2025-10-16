@@ -3,8 +3,7 @@ appId: com.heyhannah.app
 # Test: Open share modal
 
 - launchApp
-- tapOn:
-    id: "text-input"
+- tapOn: "Say something..."
 - inputText: "Share Test"
 - hideKeyboard
 
@@ -19,4 +18,3 @@ appId: com.heyhannah.app
 # Close modal
 - tapOn:
     id: "close-share-modal"
-

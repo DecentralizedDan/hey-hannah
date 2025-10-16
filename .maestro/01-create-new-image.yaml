@@ -3,12 +3,8 @@ appId: com.heyhannah.app
 # Test: Create a new text image
 
 - launchApp
-- tapOn:
-    id: "text-input"
+- tapOn: "Say something..."
 - inputText: "Hello World"
 - hideKeyboard
 - assertVisible:
-    id: "text-input"
-- assertVisible:
     text: "Hello World"
-

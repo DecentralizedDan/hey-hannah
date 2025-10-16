@@ -3,8 +3,7 @@ appId: com.heyhannah.app
 # Test: Change font family and alignment
 
 - launchApp
-- tapOn:
-    id: "text-input"
+- tapOn: "Say something..."
 - inputText: "Font Test"
 - hideKeyboard
 
@@ -23,4 +22,3 @@ appId: com.heyhannah.app
 # Verify text is still visible
 - assertVisible:
     text: "Font Test"
-

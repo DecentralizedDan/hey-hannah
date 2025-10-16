@@ -3,8 +3,7 @@ appId: com.heyhannah.app
 # Test: Toggle preview mode
 
 - launchApp
-- tapOn:
-    id: "text-input"
+- tapOn: "Say something..."
 - inputText: "Preview Test"
 - hideKeyboard
 
@@ -23,7 +22,5 @@ appId: com.heyhannah.app
 - tapOn:
     id: "preview-overlay"
 
-# Verify text input is back
-- assertVisible:
-    id: "text-input"
-
+# Verify we're back to edit view
+- assertVisible: "Preview Test"

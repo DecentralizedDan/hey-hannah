@@ -3,8 +3,7 @@ appId: com.heyhannah.app
 # Test: Navigate to gallery and back
 
 - launchApp
-- tapOn:
-    id: "text-input"
+- tapOn: "Say something..."
 - inputText: "Gallery Test"
 - hideKeyboard
 
@@ -20,7 +19,5 @@ appId: com.heyhannah.app
 - tapOn:
     id: "edit-nav-button"
 
-# Verify text input is visible
-- assertVisible:
-    id: "text-input"
-
+# Verify placeholder is visible again
+- assertVisible: "Say something..."

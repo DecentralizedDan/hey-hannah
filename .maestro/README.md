@@ -37,6 +37,7 @@ maestro studio
 ```
 
 This opens an interactive UI where you can:
+
 - See your app and tests side by side
 - Step through tests line by line
 - Record new test flows
@@ -56,6 +57,7 @@ This opens an interactive UI where you can:
 Before running tests:
 
 1. Build and install the app on iOS Simulator:
+
    ```bash
    npx expo run:ios
    ```
@@ -94,14 +96,17 @@ appId: com.heyhannah.app
 The following test IDs are available:
 
 ### Text Input
+
 - `text-input` - Main text input field
 
 ### Navigation
+
 - `gallery-nav-button` - Navigate to gallery
 - `edit-nav-button` - Navigate to edit/create view
 - `gallery-sort-button` - Toggle gallery sort mode
 
 ### Controls
+
 - `bg-color-control` - Background color control
 - `text-color-control` - Text color control
 - `font-control` - Font family control
@@ -111,6 +116,7 @@ The following test IDs are available:
 - `share-control` - Share button
 
 ### Modals
+
 - `share-modal` - Share modal container
 - `close-share-modal` - Close share modal button
 - `save-to-photos-button` - Save to photos option
@@ -118,6 +124,7 @@ The following test IDs are available:
 - `share-via-apps-button` - Share via apps option
 
 ### Views
+
 - `gallery-view` - Gallery view container
 - `preview-overlay` - Preview mode overlay
 
@@ -126,4 +133,3 @@ The following test IDs are available:
 - [Maestro Documentation](https://maestro.mobile.dev/)
 - [Test Examples](https://maestro.mobile.dev/examples)
 - [API Reference](https://maestro.mobile.dev/api-reference)
-
