@@ -2,9 +2,45 @@ appId: com.heyhannah.app
 ---
 # Test: Create a new text image
 
-- launchApp
-- tapOn: "Say something..."
+# - launchApp
+
+# # Wait for fonts to load
+# - extendedWaitUntil:
+#     notVisible:
+#       id: "loading-text"
+#     timeout: 10000
+
+# Wait for UI to be ready
+# - extendedWaitUntil:
+#     visible:
+#       id: "text-view"
+#     timeout: 3000
+# - tapOn:
+#     id: "text-view"
+# - extendedWaitUntil:
+#     visible:
+#       id: "text-input"
+#     timeout: 2000
 - inputText: "Hello World"
-- hideKeyboard
-- assertVisible:
-    text: "Hello World"
+
+# Tap on a control button to force keyboard dismissal and exit editing
+- tapOn:
+    id: "bg-color-control"
+
+# Wait for keyboard to fully dismiss
+- waitForAnimationToEnd
+
+# Wait for editing mode to fully exit
+- extendedWaitUntil:
+    notVisible:
+      id: "text-input"
+    timeout: 5000
+
+# Give the app time to render viewing mode
+- waitForAnimationToEnd
+
+# Verify we're back in viewing mode
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 5000

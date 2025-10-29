@@ -3,9 +3,30 @@ appId: com.heyhannah.app
 # Test: Change font family and alignment
 
 - launchApp
-- tapOn: "Say something..."
+
+# Wait for fonts to load
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-text"
+    timeout: 10000
+
+# Wait for UI to be ready
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 3000
+- tapOn:
+    id: "text-view"
+- extendedWaitUntil:
+    visible:
+      id: "text-input"
+    timeout: 2000
 - inputText: "Font Test"
 - hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "font-control"
+    timeout: 2000
 
 # Cycle through fonts
 - tapOn:

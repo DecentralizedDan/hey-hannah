@@ -3,9 +3,30 @@ appId: com.heyhannah.app
 # Test: Change background and text colors
 
 - launchApp
-- tapOn: "Say something..."
+
+# Wait for fonts to load
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-text"
+    timeout: 10000
+
+# Wait for UI to be ready
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 3000
+- tapOn:
+    id: "text-view"
+- extendedWaitUntil:
+    visible:
+      id: "text-input"
+    timeout: 2000
 - inputText: "Color Test"
 - hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "bg-color-control"
+    timeout: 2000
 
 # Tap background color control
 - tapOn:

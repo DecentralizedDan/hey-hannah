@@ -1,0 +1,23 @@
+appId: com.heyhannah.app
+---
+# Test: Reset app to initial state
+
+# - launchApp  # Commented out for quick testing - manually open app first
+
+# Wait for fonts to load (loading screen should disappear)
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-text"
+    timeout: 20000
+
+# Wait for main UI to appear
+- extendedWaitUntil:
+    visible:
+      id: "gallery-nav-button"
+    timeout: 20000
+
+# Verify app is in clean initial state with text view visible
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 20000

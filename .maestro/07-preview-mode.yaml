@@ -3,24 +3,47 @@ appId: com.heyhannah.app
 # Test: Toggle preview mode
 
 - launchApp
-- tapOn: "Say something..."
+
+# Wait for fonts to load
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-text"
+    timeout: 10000
+
+# Wait for UI to be ready
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 3000
+- tapOn:
+    id: "text-view"
+- extendedWaitUntil:
+    visible:
+      id: "text-input"
+    timeout: 2000
 - inputText: "Preview Test"
 - hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "preview-control"
+    timeout: 2000
 
 # Tap preview button
 - tapOn:
     id: "preview-control"
 
 # Wait for preview to appear
-- waitForAnimationToEnd
-
-# Verify preview overlay is visible
-- assertVisible:
-    id: "preview-overlay"
+- extendedWaitUntil:
+    visible:
+      id: "preview-overlay"
+    timeout: 2000
 
 # Tap to exit preview
 - tapOn:
     id: "preview-overlay"
 
 # Verify we're back to edit view
-- assertVisible: "Preview Test"
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 2000

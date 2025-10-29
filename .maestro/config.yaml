@@ -4,3 +4,5 @@ name: Hey Hannah
 # Maestro configuration for Hey Hannah app
 # Run tests with: maestro test .maestro/
 
+# Note: Tests run in parallel by default (unordered for speed)
+# To run sequentially: maestro test .maestro/run-all-sequential.yaml

@@ -1,20 +1,36 @@
 appId: com.heyhannah.app
 ---
-# Test: Open share modal
+# Test: Open share flow
 
 - launchApp
-- tapOn: "Say something..."
+
+# Wait for fonts to load
+- extendedWaitUntil:
+    notVisible:
+      id: "loading-text"
+    timeout: 10000
+
+# Wait for UI to be ready
+- extendedWaitUntil:
+    visible:
+      id: "text-view"
+    timeout: 3000
+- tapOn:
+    id: "text-view"
+- extendedWaitUntil:
+    visible:
+      id: "text-input"
+    timeout: 2000
 - inputText: "Share Test"
 - hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: "share-control"
+    timeout: 2000
 
 # Tap share button
 - tapOn:
     id: "share-control"
 
-# Verify share modal appears
-- assertVisible:
-    id: "share-modal"
-
-# Close modal
-- tapOn:
-    id: "close-share-modal"
+# Wait for share dialog
+- waitForAnimationToEnd

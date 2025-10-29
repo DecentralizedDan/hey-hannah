@@ -1,0 +1,352 @@
+MAESTRO TESTING APPROACH
+========================
+
+OVERVIEW
+--------
+
+Hey Hannah uses Maestro for automated UI testing. Maestro is a mobile UI testing framework that provides:
+
+- Cross-platform testing (iOS/Android)
+- Simple YAML-based test syntax
+- Fast execution with built-in waiting
+- Interactive test recording via Studio mode
+- No code required
+
+TESTING PHILOSOPHY
+------------------
+
+The test suite follows a progressive approach where each test builds on core functionality:
+
+1. Tests are numbered sequentially (00-07)
+2. Each test focuses on a single feature or user flow
+3. Tests verify both interaction success and UI state
+4. Tests maintain isolation by starting fresh or using reset flow
+
+TEST SUITE STRUCTURE
+--------------------
+
+### 00-reset-app.yaml
+Purpose: Reset application to initial state
+Approach: Launches app with clearState flag to remove persisted data
+Validates: Gallery view appears as expected on clean launch
+
+### 01-create-new-image.yaml
+Purpose: Basic text input functionality
+Approach: Taps placeholder, enters text, dismisses keyboard
+Validates: Entered text appears in text editor
+
+### 02-change-colors.yaml
+Purpose: Background and text color controls
+Approach: Creates text, then cycles through color controls
+Validates: Text remains visible after color changes
+
+### 03-change-font-and-alignment.yaml
+Purpose: Font family and text alignment controls
+Approach: Creates text, cycles fonts twice, cycles alignments twice
+Validates: Text remains visible after formatting changes
+
+### 04-text-size.yaml
+Purpose: Text size adjustment
+Approach: Creates text, cycles size control three times
+Validates: Text remains visible at different sizes
+
+### 05-share-flow.yaml
+Purpose: Share modal interaction
+Approach: Opens share modal, verifies modal appears, closes modal
+Validates: Share modal appears and can be dismissed
+
+### 06-gallery-navigation.yaml
+Purpose: Navigation between create and gallery views
+Approach: Creates text, navigates to gallery, returns to create
+Validates: Gallery view appears, placeholder reappears on return
+
+### 07-preview-mode.yaml
+Purpose: Preview mode toggle
+Approach: Creates text, enters preview, waits for animation, exits preview
+Validates: Preview overlay appears and dismisses correctly
+
+TEST NAMING CONVENTION
+----------------------
+
+Format: {number}-{feature-name}.yaml
+
+- Number: Two-digit sequence starting at 00
+- Feature name: Kebab-case description of tested feature
+- Extension: .yaml for Maestro test files
+
+Examples:
+- 00-reset-app.yaml
+- 01-create-new-image.yaml
+- 05-share-flow.yaml
+
+TEST IDS
+--------
+
+All interactive elements use testID props for reliable element selection.
+
+### Input Elements
+- text-view: Text viewing area (tap to enter editing mode)
+- text-input: Main text input field (only visible when editing)
+
+### Navigation Elements
+- gallery-nav-button: Navigate to gallery view
+- edit-nav-button: Navigate to create/edit view
+- gallery-sort-button: Toggle gallery sort mode
+
+### Control Elements
+- bg-color-control: Background color selector
+- text-color-control: Text color selector
+- font-control: Font family selector
+- size-control: Text size selector
+- alignment-control: Text alignment selector
+- preview-control: Preview mode toggle
+- share-control: Share button
+
+### Modal Elements
+- share-modal: Share modal container
+- close-share-modal: Close button in share modal
+- save-to-photos-button: Save to photos option
+- copy-to-clipboard-button: Copy to clipboard option
+- share-via-apps-button: Share via system sheet option
+
+### View Containers
+- gallery-view: Gallery view container
+- preview-overlay: Preview mode overlay
+
+COMMON TEST PATTERNS
+--------------------
+
+### Basic Text Input
+```yaml
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "gallery-nav-button"
+    timeout: 15000
+- tapOn:
+    point: "50%,40%"
+- inputText: "Test Text"
+- hideKeyboard
+- assertVisible:
+    text: "Test Text"
+```
+
+Note: All tests wait for the "gallery-nav-button" testID to appear with a 15-second timeout after `launchApp` using `extendedWaitUntil`. This is critical because the app returns null while Google Fonts load, so the UI doesn't render until fonts are ready. Tests use coordinate-based tapping (`point: "50%,40%"`) to activate the text input area, as this proved more reliable than testID-based selection for the text editing component.
+
+### Control Interaction
+```yaml
+- tapOn:
+    id: "control-name"
+- assertVisible:
+    text: "Text Still Here"
+```
+
+### Modal Flow
+```yaml
+- tapOn:
+    id: "share-control"
+- assertVisible:
+    id: "share-modal"
+- tapOn:
+    id: "close-share-modal"
+```
+
+### Navigation Flow
+```yaml
+- tapOn:
+    id: "gallery-nav-button"
+- assertVisible:
+    id: "gallery-view"
+- tapOn:
+    id: "edit-nav-button"
+```
+
+RUNNING TESTS
+-------------
+
+### Run All Tests (Sequential)
+```bash
+maestro test .maestro/
+```
+
+Tests execute in alphabetical order based on filename (00, 01, 02, etc.)
+
+### Run Single Test
+```bash
+maestro test .maestro/01-create-new-image.yaml
+```
+
+### Interactive Mode (Studio)
+```bash
+maestro studio
+```
+
+Studio provides:
+- Side-by-side app and test viewer
+- Step-by-step execution
+- Test recording capability
+- Element inspector
+
+PREREQUISITES
+-------------
+
+1. Install Maestro
+```bash
+curl -Ls "https://get.maestro.mobile.dev" | bash
+export PATH="$PATH:$HOME/.maestro/bin"
+```
+
+2. Build and install app on iOS Simulator
+```bash
+npx expo run:ios
+```
+
+3. Keep simulator running during test execution
+
+APP CONFIGURATION
+-----------------
+
+Bundle ID: com.heyhannah.app
+App Name: Hey Hannah
+
+The config.yaml file in .maestro/ defines these defaults for all tests.
+
+ADDING NEW TESTS
+----------------
+
+1. Determine next sequential number (08, 09, etc.)
+
+2. Create new YAML file following naming convention:
+   {number}-{feature-name}.yaml
+
+3. Include standard header:
+```yaml
+appId: com.heyhannah.app
+---
+# Test: Description of what this tests
+```
+
+4. Write test steps using Maestro commands:
+   - launchApp: Start the app
+   - extendedWaitUntil: Wait until a condition is met (supports visible, timeout)
+   - assertVisible: Verify element appears
+   - tapOn: Tap element by text, id, or coordinates
+   - inputText: Type into focused input
+   - hideKeyboard: Dismiss keyboard
+   - waitForAnimationToEnd: Wait for animations to complete
+   - swipe: Swipe gestures
+
+   Always wait for the "Gallery" button immediately after `launchApp`:
+   ```yaml
+   - extendedWaitUntil:
+       visible: "Gallery"
+       timeout: 10000
+   ```
+   This is required because the app loads Google Fonts and returns null until they're ready.
+
+5. Add assertions to validate expected state
+
+6. Update .maestro/README.md with test description
+
+7. Test locally before committing:
+```bash
+maestro test .maestro/{number}-{feature-name}.yaml
+```
+
+BEST PRACTICES
+--------------
+
+### Element Selection Priority
+1. Use testID when available (most reliable)
+2. Use visible text for static labels
+3. Use coordinates when testIDs are unavailable (text input uses point: "50%,40%")
+
+Note: While coordinates can be device-specific, using percentage-based coordinates (50%,40%) works reliably across different screen sizes.
+
+### Assertions
+- Assert visible state after each major interaction
+- Verify text content remains after control changes
+- Confirm modals appear and dismiss correctly
+
+### Test Isolation
+- Each test should work independently
+- Use 00-reset-app.yaml when clean state needed
+- Don't rely on other tests running first
+
+### Animation and Loading Handling
+- Always use `extendedWaitUntil` to wait for "Gallery" button after launchApp (10-second timeout)
+- The app loads Google Fonts before rendering, so waiting for a visible element is critical
+- Use waitForAnimationToEnd for modal appearances and transitions
+- Maestro includes built-in smart waiting for most interactions
+- Never rely on fixed wait times - always wait for visible elements using extendedWaitUntil
+
+### Keyboard Management
+- Always hideKeyboard after inputText
+- Prevents keyboard from covering elements
+- Ensures consistent view state
+
+LIMITATIONS AND CONSIDERATIONS
+------------------------------
+
+### Current Scope
+Tests cover:
+- Text input and editing
+- All control interactions
+- Navigation flows
+- Modal interactions
+- Preview mode
+
+Tests do not cover:
+- Multi-image gallery scenarios
+- Complex text formatting
+- Persistence across app restarts (beyond reset test)
+- Share functionality completion (only modal interaction)
+- Error states
+
+### Platform Specifics
+- Tests currently target iOS Simulator
+- Android support requires additional configuration
+- Device-specific behaviors not tested
+
+### Performance
+- Tests execute quickly (seconds per test)
+- Full suite runs in under a minute
+- No need for explicit waits in most cases
+
+TROUBLESHOOTING
+---------------
+
+### App Not Found
+Ensure app is installed in simulator and bundle ID matches config.yaml
+
+### Element Not Found
+1. Check if fonts are loaded - the app returns null while loading Google Fonts
+2. Ensure tests wait for "Gallery" button with 10-second timeout after launchApp
+3. Check testID exists in component code
+4. Verify element is visible (not hidden by keyboard/modal)
+5. Try running in Studio mode to inspect elements
+
+### Test Flakiness
+1. Always wait for visible elements using extendedWaitUntil rather than fixed time waits
+2. Ensure keyboard is hidden before tapping other elements
+3. Check for timing-dependent state changes
+4. Increase timeout on extendedWaitUntil if fonts take longer to load
+
+### Simulator Issues
+1. Restart simulator
+2. Rebuild and reinstall app
+3. Clear simulator state if needed
+
+### Font Loading Issues
+The app uses Google Fonts which must load before the UI renders. If tests fail with "Element not found" errors:
+1. Verify the extendedWaitUntil timeout (10000ms) is sufficient
+2. Check network connectivity for font downloads
+3. Ensure fonts are properly cached after first run
+
+REFERENCES
+----------
+
+Maestro Documentation: https://maestro.mobile.dev/
+Test Examples: https://maestro.mobile.dev/examples
+API Reference: https://maestro.mobile.dev/api-reference
+

@@ -1,0 +1,12 @@
+appId: com.heyhannah.app
+---
+# Run all tests sequentially in order
+
+- runFlow: 00-reset-app.yaml
+- runFlow: 01-create-new-image.yaml
+- runFlow: 02-change-colors.yaml
+- runFlow: 03-change-font-and-alignment.yaml
+- runFlow: 04-text-size.yaml
+- runFlow: 05-share-flow.yaml
+- runFlow: 06-gallery-navigation.yaml
+- runFlow: 07-preview-mode.yaml
