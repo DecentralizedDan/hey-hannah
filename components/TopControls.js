@@ -107,7 +107,11 @@ const TopControls = ({
       </Pressable>
 
       {/* Font family control */}
-      <TouchableOpacity testID="font-control" style={styles.controlButton} onPress={onCycleFontFamily}>
+      <TouchableOpacity
+        testID="font-control"
+        style={styles.controlButton}
+        onPress={onCycleFontFamily}
+      >
         <View style={[styles.fontIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>Aa</Text>
         </View>
@@ -115,7 +119,11 @@ const TopControls = ({
       </TouchableOpacity>
 
       {/* Text size control */}
-      <TouchableOpacity testID="size-control" style={styles.controlButton} onPress={onCycleTextSize}>
+      <TouchableOpacity
+        testID="size-control"
+        style={styles.controlButton}
+        onPress={onCycleTextSize}
+      >
         <View style={[styles.sizeIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>{currentTextSizeLabel}</Text>
         </View>
@@ -123,7 +131,11 @@ const TopControls = ({
       </TouchableOpacity>
 
       {/* Alignment control */}
-      <TouchableOpacity testID="alignment-control" style={styles.controlButton} onPress={onCycleAlignment}>
+      <TouchableOpacity
+        testID="alignment-control"
+        style={styles.controlButton}
+        onPress={onCycleAlignment}
+      >
         <View style={[styles.alignmentIcon, { borderColor: "#FFFFFF" }]}>
           <Text style={[styles.alignmentText, { color: "#FFFFFF" }]}>
             {currentAlignment === "left" ? "←" : currentAlignment === "center" ? "↔" : "→"}

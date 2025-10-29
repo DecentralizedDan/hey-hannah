@@ -1795,7 +1795,20 @@ function AppContent() {
 
   // Wait for fonts to load
   if (!fontsLoaded) {
-    return null; // or a loading screen
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FFCC02",
+        }}
+      >
+        <Text style={{ fontSize: 20, color: "#000" }} testID="loading-text">
+          Loading fonts...
+        </Text>
+      </View>
+    );
   }
 
   return (
@@ -2032,6 +2045,9 @@ function AppContent() {
                         {/* Viewing mode: Show formatted text overlay */}
                         {!isEditingText && (
                           <TouchableOpacity
+                            testID="text-view"
+                            accessible={true}
+                            accessibilityLabel="text-view"
                             style={[
                               styles.textInput,
                               {
