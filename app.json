@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.heyhannah.app",
-      "buildNumber": "21",
+      "buildNumber": "22",
       "deploymentTarget": "13.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
