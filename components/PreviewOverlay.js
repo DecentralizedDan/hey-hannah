@@ -27,6 +27,11 @@ const PreviewOverlay = ({
     return null;
   }
 
+  const finalHeight =
+    previewHeight && !isNaN(previewHeight) && isFinite(previewHeight) && previewHeight > 0
+      ? previewHeight
+      : 400;
+
   return (
     <TouchableWithoutFeedback onPress={onExitPreview}>
       <View style={styles.previewOverlay}>
@@ -135,14 +140,9 @@ const PreviewOverlay = ({
                 styles.previewContainerOverlay,
                 {
                   backgroundColor: currentBackgroundColor,
-                  height:
-                    previewHeight &&
-                    !isNaN(previewHeight) &&
-                    isFinite(previewHeight) &&
-                    previewHeight > 0
-                      ? previewHeight
-                      : 400, // Use actual calculated height to match saved image in pixels
+                  height: finalHeight, // Use actual calculated height to match saved image in pixels
                   width: Dimensions.get("window").width,
+                  justifyContent: "flex-start",
                 },
               ]}
             >
@@ -157,6 +157,7 @@ const PreviewOverlay = ({
                         : 32,
                     textAlign: currentAlignment,
                     fontFamily: currentFontFamily,
+                    flexShrink: 1,
                   },
                 ]}
               >

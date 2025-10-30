@@ -624,9 +624,21 @@ function AppContent() {
       const getFallbackHeight = () => {
         const currentSize = TEXT_SIZES[currentTextSize] || "medium";
         const fontSize = getSizeValue(currentSize, magnification);
-        // TODO update rough estimate for different size fonts
-        const lines = Math.ceil(text.length / 20); // Rough estimate of lines
-        const calculatedHeight = Math.round(Math.max(fontSize * lines * 1.2, 200)); // Line height factor in pixels
+
+        // Calculate more accurate line estimate based on screen width and font size
+        const screenWidth = Dimensions.get("window").width;
+        const availableWidth = screenWidth * 0.9; // 90% of screen width (accounting for 5% padding on each side)
+        const avgCharWidth = fontSize * 0.6; // Average character width is roughly 60% of font size
+        const charsPerLine = Math.floor(availableWidth / avgCharWidth);
+        const estimatedLines = Math.max(1, Math.ceil(text.length / charsPerLine));
+
+        // Use line height of 1.15x font size (matching capture screen)
+        const lineHeight = fontSize * 1.15;
+        const textHeight = estimatedLines * lineHeight;
+
+        // Add padding that matches measureText component (5% top padding)
+        const topPadding = screenWidth * 0.05; // 5% of screen width as rough estimate for vertical padding
+        const calculatedHeight = Math.round(textHeight + topPadding);
 
         return calculatedHeight && !isNaN(calculatedHeight) && isFinite(calculatedHeight)
           ? calculatedHeight
@@ -1982,21 +1994,34 @@ function AppContent() {
                     </View>
 
                     {/* Invisible text for measurement - always rendered */}
-                    <SegmentedText
-                      ref={measureTextRef}
-                      segments={
-                        textSegments.length > 0 ? textSegments : [{ text: text, size: "medium" }]
-                      }
-                      magnification={magnification}
-                      style={[
-                        styles.measureText,
-                        {
+                    <View
+                      style={{
+                        position: "absolute",
+                        width: Dimensions.get("window").width,
+                        paddingHorizontal: "5%",
+                        paddingTop: "5%",
+                        opacity: 0,
+                        pointerEvents: "none",
+                      }}
+                      collapsable={false}
+                    >
+                      <SegmentedText
+                        ref={measureTextRef}
+                        segments={
+                          textSegments.length > 0
+                            ? textSegments
+                            : [{ text: text, size: TEXT_SIZES[currentTextSize] || "medium" }]
+                        }
+                        magnification={magnification}
+                        style={{
                           color: currentTextColor,
                           textAlign: currentAlignment,
                           fontFamily: currentFontFamily,
-                        },
-                      ]}
-                    />
+                          textAlignVertical: "top",
+                          width: "100%",
+                        }}
+                      />
+                    </View>
 
                     {/* Dual-mode text editing system */}
                     {!isPreviewMode && (

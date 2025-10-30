@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
   previewText: {
     textAlignVertical: "top",
     paddingHorizontal: "5%", // Text padding in pixels
+    width: "100%", // Allow text to wrap properly
   },
   measureText: {
     position: "absolute",
@@ -117,6 +118,7 @@ const styles = StyleSheet.create({
     paddingTop: "5%",
     width: "100%",
     pointerEvents: "none", // Don't interfere with touch events
+    flex: 0, // Allow text to wrap properly
   },
   emptyPreviewContainer: {
     position: "absolute",
